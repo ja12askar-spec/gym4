@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Моя Школа · Гимназия №4</title>
+<meta name="description" content="Школьный сайт: расписание, домашние задания, журнал, объявления и чат."/>
+<meta name="robots" content="noindex, nofollow"/>
+<meta name="theme-color" content="#1769FF"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Моя Школа"/>
+<link rel="icon" href="./Picsart_25-04-29_18-23-38-058.jpg"/>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<!-- ══ FIREBASE (та же база, что и в прежнем сайте) ══ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyBn_T427SM0L3C8Wr6GRPqIkvwXQ42GAQk",
+    authDomain:        "askar-3879e.firebaseapp.com",
+    databaseURL:       "https://askar-3879e-default-rtdb.firebaseio.com",
+    projectId:         "askar-3879e",
+    storageBucket:     "askar-3879e.firebasestorage.app",
+    messagingSenderId: "56810290178",
+    appId:             "1:56810290178:web:b8f58a76601f4531befb1b",
+    measurementId:     "G-H4KKSHTLGD"
+  };
+  try {
+    const app = firebase.initializeApp(firebaseConfig);
+    window.firebaseDB = firebase.database(app);
+  } catch (e) { console.error('Firebase ошибка:', e); }
+
+  // PWA: тот же service worker, что и раньше
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./service-worker.js').catch(function (e) { console.log('SW ошибка:', e); });
+    });
+  }
+</script>
+
+<style>
+:root{
+  --blue:#1769FF; --blue2:#0A52D6; --blue-soft:#E8F0FF; --ink:#14213D; --mut:#7B8BA6; --line:#E6EDF9;
+  --bg:#F5F8FE; --card:#FFFFFF; --green:#1FB26F; --green-soft:#E3F7EE; --orange:#FF9433; --orange-soft:#FFF0E0;
+  --purple:#6C5CE7; --purple-soft:#EEEAFF; --red:#EF4F4F; --red-soft:#FFE9E8;
+  --sh:0 8px 24px rgba(23,105,255,.07),0 1px 2px rgba(20,33,61,.05);
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:var(--ink);
+  background:linear-gradient(160deg,#E6F0FF,#F8FBFF 50%,#E3EDFF);min-height:100dvh;display:flex;justify-content:center;align-items:center;font-size:14px;line-height:1.35}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.app{position:relative;width:100%;max-width:430px;height:100dvh;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+@media(min-width:520px){.app{height:min(calc(100dvh - 32px),900px);border-radius:38px;box-shadow:0 30px 80px rgba(23,105,255,.22),0 0 0 1px #D9E5FA}}
+#view{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:calc(var(--safe-t) + 16px) 16px 22px;scroll-behavior:smooth;overscroll-behavior:contain}
+#view.chat{padding:0;display:flex;flex-direction:column;overflow:hidden}
+#view.bare{padding:0}
+.ic{flex:none;display:block}
+.muted{color:var(--mut)}
+
+/* ── верхняя часть экранов ── */
+.top{display:flex;align-items:center;gap:8px;margin-bottom:14px;min-height:40px}
+.top h1{font-size:21px;font-weight:800;letter-spacing:-.2px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-back h1{font-size:19px}
+.top-r{display:flex;align-items:center;gap:6px}
+.ib{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--ink);position:relative}
+.ib:active{background:var(--blue-soft)}
+.top-back .ib:first-child{margin-left:-8px}
+.ib.blue{color:var(--blue)}
+.dot{position:absolute;top:8px;right:9px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--bg);display:none}
+.dot.on{display:block}
+
+/* ── карточки и списки ── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh)}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left}
+.row .grow{flex:1;min-width:0}
+.row .t{font-weight:700;font-size:13.5px;line-height:1.25}
+.row .s{font-size:11.5px;color:var(--mut);margin-top:2px;line-height:1.3}
+.row .chev{color:#B4C0D6}
+.tile-ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:none;background:var(--bg-c,var(--blue-soft));color:var(--c,var(--blue))}
+.tile-ic.sm{width:36px;height:36px;border-radius:11px}
+.sec{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 10px}
+.sec h3{font-size:14px;font-weight:800}
+.lnk{color:var(--blue);font-weight:700;font-size:12px;padding:4px}
+.empty{padding:26px 16px;text-align:center;color:var(--mut);font-size:13px}
+.empty b{display:block;color:var(--ink);margin-bottom:4px;font-size:14px}
+
+/* ── аватар ── */
+.av{display:grid;place-items:center;border-radius:50%;background:var(--bg-c);color:var(--c);font-weight:800;flex:none;letter-spacing:.2px}
+.av-btn{border-radius:50%}
+
+/* ── приветствие / главная ── */
+.home-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.home-top h1{font-size:21px;font-weight:800}
+.home-r{display:flex;align-items:center;gap:4px}
+.hello{margin:6px 2px 14px}
+.hello .hi{font-size:21px;line-height:1.25;font-weight:500}
+.hello .hi b{font-weight:800}
+.hello .muted{font-size:12px;margin-top:4px}
+.class-card{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px;background:linear-gradient(180deg,#EAF2FF,#E4EEFF);border:1px solid #D5E3FB;border-radius:18px}
+.class-card .badge{width:42px;height:42px;border-radius:12px;background:var(--blue);color:#fff;font-weight:800;display:grid;place-items:center;font-size:14px;flex:none;box-shadow:0 6px 14px rgba(23,105,255,.3)}
+.class-card .t{font-weight:800;font-size:14px}
+.class-card .s{font-size:11px;color:var(--mut);margin-top:1px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:14px;border-radius:18px;background:var(--bg-c);text-align:left;min-height:96px;border:1px solid rgba(255,255,255,.7);box-shadow:var(--sh)}
+.tile .tile-ic{background:var(--c);color:#fff;width:44px;height:44px;border-radius:14px;box-shadow:0 8px 16px -6px var(--c)}
+.tile span{font-weight:700;font-size:12.5px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{padding:12px 8px;text-align:center}
+.stat b{display:block;font-size:20px;font-weight:800;letter-spacing:-.3px}
+.stat small{font-size:10.5px;color:var(--mut);font-weight:600}
+.note{background:var(--orange-soft);color:#9A5200;border-radius:12px;padding:10px 12px;font-size:12px;margin-bottom:12px;font-weight:600}
+
+/* ── нижняя панель ── */
+#tabbar{display:flex;background:#fff;border-top:1px solid var(--line);padding:8px 6px calc(8px + var(--safe-b));flex:none}
+#tabbar.hide{display:none}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:600;color:#8D9BB5;position:relative;padding:2px 0}
+.tab .ti{width:30px;height:28px;border-radius:9px;display:grid;place-items:center}
+.tab.on{color:var(--blue);font-weight:800}
+.tab.on .ti{background:var(--blue);color:#fff;box-shadow:0 6px 14px -4px rgba(23,105,255,.6)}
+.tab .tdot{position:absolute;top:0;left:calc(50% + 7px);width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid #fff;display:none}
+.tab .tdot.on{display:block}
+
+/* ── кнопки / формы ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border-radius:14px;background:var(--blue);color:#fff;font-weight:800;font-size:14px;box-shadow:0 10px 20px -8px rgba(23,105,255,.6)}
+.btn:active{background:var(--blue2)}
+.btn.ghost{background:#fff;color:var(--blue);border:1.5px solid #BBD2FF;box-shadow:none}
+.btn.red{background:var(--red);box-shadow:none}
+.btn.sm{width:auto;padding:9px 14px;font-size:12px;border-radius:11px;box-shadow:none}
+.btn[disabled]{opacity:.5}
+.field{display:block;margin-bottom:12px}
+.field>span{display:block;font-size:12px;font-weight:700;color:var(--mut);margin-bottom:6px}
+.inp{width:100%;padding:12px 14px;border-radius:13px;border:1.5px solid var(--line);background:#fff;outline:0;font-size:14px;appearance:none;-webkit-appearance:none}
+.inp:focus{border-color:var(--blue)}
+textarea.inp{resize:vertical;min-height:84px}
+select.inp{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237B8BA6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.err{color:var(--red);font-size:12px;font-weight:700;margin:-4px 0 10px;display:none}
+.search{display:flex;align-items:center;gap:8px;background:#EDF2FB;border-radius:13px;padding:0 12px;color:var(--mut);margin-bottom:12px}
+.search input{flex:1;border:0;background:none;outline:0;padding:12px 0;font-size:13px;min-width:0}
+.pills{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;margin:0 -16px;padding-left:16px;padding-right:16px;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex:none;padding:8px 16px;border-radius:12px;background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;color:#51617F}
+.pill.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 8px 16px -8px rgba(23,105,255,.7)}
+.seg{display:flex;gap:10px;margin-bottom:12px}
+.seg .pill{flex:1;text-align:center;padding:10px}
+.sel2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.sel2 .inp{padding:10px 12px;font-size:12.5px;font-weight:700;border-radius:12px}
+.bottom-cta{position:sticky;bottom:-8px;padding:12px 0 4px;background:linear-gradient(180deg,rgba(245,248,254,0),var(--bg) 40%);margin-top:6px}
+
+/* ── Журнал: таблица ── */
+.tbl-wrap{overflow-x:auto;border-radius:18px}
+.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%}
+.tbl th,.tbl td{padding:11px 8px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line)}
+.tbl th{font-size:11px;color:var(--ink);font-weight:800;background:#F3F7FE;position:sticky;top:0}
+.tbl th:first-child,.tbl td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:1;padding-left:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:11.5px}
+.tbl th:first-child{background:#F3F7FE;z-index:2}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .sub-h{cursor:pointer}
+.tbl .avgc{font-weight:800;background:#FAFCFF}
+.tbl tr.me td{background:#F1F7FF}
+.tbl tr.me td:first-child{background:#F1F7FF;color:var(--blue)}
+.gc{font-weight:800;font-size:12.5px;display:inline-block;min-width:22px}
+.g-hi{color:var(--green)} .g-mid{color:var(--blue)} .g-low{color:var(--orange)} .g-bad{color:var(--red)}
+button.gcb{min-width:34px;padding:4px 6px;border-radius:9px}
+button.gcb:active{background:var(--blue-soft)}
+.gcb.emp{color:#C5D0E4;font-weight:600}
+.jbtns{display:flex;gap:10px;margin-top:12px}
+
+/* ── ДЗ ── */
+.hw .row{align-items:flex-start}
+.hw .tile-ic{margin-top:2px}
+.hw .due{font-size:11.5px;font-weight:700;margin-top:6px}
+.hw .due.late{color:var(--red)}
+.hw .due.ok{color:var(--mut)}
+.hw .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:99px;font-size:10.5px;font-weight:800}
+.chip.no{background:var(--red-soft);color:var(--red)}
+.chip.yes{background:var(--green-soft);color:var(--green)}
+.chip.warn{background:var(--orange-soft);color:#C26500}
+.chip.blue{background:var(--blue-soft);color:var(--blue)}
+.chip i{width:8px;height:8px;border-radius:50%;background:currentColor;display:block}
+.mini-x{color:#B4C0D6;padding:2px}
+
+/* ── Расписание ── */
+.days{display:flex;gap:8px;margin-bottom:14px}
+.day{flex:1;padding:10px 0;border-radius:12px;background:#fff;border:1px solid var(--line);font-weight:700;font-size:12px;color:#51617F;text-align:center}
+.day.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 8px 16px -8px rgba(23,105,255,.7)}
+.lesson .num{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:15px;background:var(--bg-c);color:var(--c);flex:none}
+.lesson .time{font-size:11px;color:var(--mut);font-weight:600}
+.lesson .t{font-size:14px;margin-top:1px}
+.lesson.cancel .t{text-decoration:line-through;color:var(--mut)}
+.lesson.now{border-color:#9DC0FF;background:#F4F8FF}
+.lesson .s.red{color:var(--red);font-weight:700}
+.lesson .s.blue{color:var(--blue);font-weight:700}
+
+/* ── Профиль / меню ── */
+.prof-head{display:flex;align-items:center;gap:14px;padding:6px 2px 16px}
+.prof-head .t{font-weight:800;font-size:17px}
+.prof-head .s{color:var(--mut);font-size:12px;margin-top:2px}
+.menu{overflow:hidden}
+.menu .row{border-bottom:1px solid var(--line);padding:15px 14px}
+.menu .row:last-child{border-bottom:0}
+.menu .mic{color:#5B7BB8;display:grid;place-items:center}
+.menu .t{font-weight:600;font-size:13.5px}
+.badge-n{background:var(--red);color:#fff;font-size:10px;font-weight:800;border-radius:99px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 5px}
+
+/* ── Чат ── */
+.thread .when{font-size:10.5px;color:var(--mut);font-weight:600}
+.thread .unread{background:var(--blue);color:#fff;min-width:20px;height:20px;border-radius:99px;font-size:10.5px;font-weight:800;display:grid;place-items:center;padding:0 6px;margin-top:4px;margin-left:auto}
+.chat-top{display:flex;align-items:center;gap:10px;padding:calc(var(--safe-t) + 10px) 12px 10px;background:#fff;border-bottom:1px solid var(--line);flex:none}
+.chat-top .t{font-weight:800;font-size:14.5px}
+.chat-top .s{font-size:11px;color:var(--mut)}
+.msgs{flex:1;min-height:0;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.m{max-width:80%;padding:8px 12px 6px;border-radius:16px;background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:5px;text-align:left;box-shadow:0 2px 6px rgba(23,105,255,.04)}
+.m.own{align-self:flex-end;background:var(--blue);color:#fff;border-color:var(--blue);border-bottom-left-radius:16px;border-bottom-right-radius:5px}
+.m .ms{font-size:11px;font-weight:800;margin-bottom:2px}
+.m .mt{font-size:13.5px;white-space:pre-wrap;word-break:break-word}
+.m .mr{font-size:11px;border-left:3px solid var(--blue);padding:2px 8px;margin-bottom:5px;background:rgba(23,105,255,.08);border-radius:6px;color:var(--mut)}
+.m.own .mr{border-color:#fff;background:rgba(255,255,255,.18);color:#E6EFFF}
+.m .mm{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:3px;font-size:10px;opacity:.75;flex-wrap:wrap}
+.m .rx{background:var(--blue-soft);color:var(--ink);border-radius:99px;padding:1px 7px;font-size:11px;opacity:1}
+.m.own .rx{background:rgba(255,255,255,.22);color:#fff}
+.msys{align-self:center;background:#E8EEF9;color:var(--mut);font-size:11px;font-weight:600;padding:4px 12px;border-radius:99px}
+.mday{align-self:center;font-size:11px;color:var(--mut);font-weight:700;margin:6px 0}
+.reply-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#fff;border-top:1px solid var(--line);font-size:12px;color:var(--mut);flex:none}
+.reply-bar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.composer{display:flex;align-items:flex-end;gap:10px;padding:10px 12px calc(10px + var(--safe-b));background:#fff;border-top:1px solid var(--line);flex:none}
+.composer textarea{flex:1;border:1.5px solid var(--line);border-radius:18px;padding:10px 14px;outline:0;resize:none;max-height:110px;min-height:42px;line-height:1.3;background:#F7FAFF}
+.composer textarea:focus{border-color:var(--blue)}
+.send{width:44px;height:44px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 8px 16px -6px rgba(23,105,255,.7)}
+
+/* ── Оплата / посещаемость ── */
+.bar{height:7px;border-radius:99px;background:#E8EEF9;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--c,var(--blue))}
+.big{font-size:26px;font-weight:800;letter-spacing:-.5px}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:32px;height:32px;border-radius:10px;background:var(--blue-soft);color:var(--blue);font-weight:800;font-size:17px;display:grid;place-items:center}
+.stepper b{min-width:22px;text-align:center;font-size:15px}
+
+/* ── Приветственный экран ── */
+.welcome{display:flex;flex-direction:column;height:100%;padding:calc(var(--safe-t) + 12px) 12px calc(14px + var(--safe-b));gap:14px;background:#fff}
+.wcard{flex:1;min-height:0;border-radius:26px;overflow:hidden;background:linear-gradient(180deg,#1A6BFF 0%,#0C54E0 60%,#0B4CD0 100%);display:flex;flex-direction:column;align-items:center;padding-top:34px;position:relative;box-shadow:0 14px 34px -12px rgba(23,105,255,.6)}
+.wcard .cap{color:#fff}
+.wcard h1{color:#fff;font-size:30px;font-weight:800;margin-top:8px;letter-spacing:-.4px}
+.wcard p{color:rgba(255,255,255,.85);font-size:13.5px;margin-top:6px;font-weight:500}
+.wcard svg.school{position:absolute;left:0;right:0;bottom:0;width:100%;height:auto}
+.wbtns{display:flex;flex-direction:column;gap:10px;flex:none}
+.wbtns .btn{padding:15px}
+
+/* ── Мотивационный экран ── */
+.motiv{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;background:linear-gradient(180deg,#F8FBFF,#E4EEFF);position:relative}
+.motiv h2{font-size:25px;font-weight:800;color:var(--blue);line-height:1.2;margin-top:6px}
+.motiv p{color:var(--mut);margin-top:10px;font-size:13px}
+.motiv .btn{margin-top:28px;max-width:240px}
+.motiv .xb{position:absolute;top:calc(var(--safe-t) + 12px);left:10px}
+
+/* ── Шторка ── */
+.sbg{position:absolute;inset:0;background:rgba(14,28,58,.42);display:flex;align-items:flex-end;opacity:0;transition:opacity .2s;z-index:50}
+.sbg.on{opacity:1}
+.sheet{width:100%;max-height:88%;overflow-y:auto;background:#fff;border-radius:26px 26px 0 0;padding:10px 18px calc(20px + var(--safe-b));transform:translateY(40px);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.sbg.on .sheet{transform:none}
+.grab{width:40px;height:4px;border-radius:9px;background:#D5DEEE;margin:0 auto 12px}
+.sheet h2{font-size:18px;font-weight:800}
+.ssub{color:var(--mut);font-size:12.5px;margin:3px 0 14px}
+.sheet h2+.field,.sheet h2+div{margin-top:12px}
+.gridn{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:6px 0 10px}
+.gridn button{padding:14px 0;border-radius:12px;background:var(--bg);font-weight:800;font-size:16px;border:1.5px solid var(--line)}
+.gridn button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.react-row{display:flex;gap:8px;margin:10px 0 14px;justify-content:space-between}
+.react-row button{font-size:22px;width:44px;height:44px;border-radius:14px;background:var(--bg)}
+.act-list{display:flex;flex-direction:column}
+.act-list button{display:flex;gap:12px;align-items:center;padding:14px 4px;border-top:1px solid var(--line);font-weight:700;font-size:14px;text-align:left}
+.sw{position:relative;width:46px;height:28px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;border-radius:99px;background:#CBD6EA;transition:background .2s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:transform .2s}
+.sw input:checked+i{background:var(--blue)}
+.sw input:checked+i::after{transform:translateX(18px)}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}
+.kv span{color:var(--mut)} .kv b{text-align:right}
+.kv:last-child{border-bottom:0}
+#toast{position:absolute;left:50%;bottom:calc(86px + var(--safe-b));transform:translate(-50%,20px);background:#14213D;color:#fff;padding:10px 16px;border-radius:12px;font-size:12.5px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:80;max-width:86%;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <main id="view"></main>
+  <nav id="tabbar" aria-label="Основное меню"></nav>
+  <div id="sheetRoot"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+/* ═══════════════ ДАННЫЕ КЛАССА (из прежнего сайта) ═══════════════ */
+const PASS = '0926';                 // пароль классного руководителя (режим учителя)
+const DIRECTOR_PASS = 'director2026'; // ← ПАРОЛЬ ДИРЕКТОРА. Обязательно поменяйте на свой!
+const SCHOOL = 'Гимназия №4';
+const TOTAL_PAY = 2000;              // сомони с ученика
+const ICON = './Picsart_25-04-29_18-23-38-058.jpg';
+let ST = [];                         // ученики выбранного класса (заполняется из Firebase)
+const PHONE = {};
+const DEFAULT_SUBJECTS = ['Математика','Английский','Русский','История','Информатика','Физика'];
+const TIMES = ['8:00–8:45','8:50–9:35','9:40–10:25','10:40–11:25','11:30–12:15','12:20–13:05','13:10–13:55'];
+let SCHEDULE = {};                   // расписание выбранного класса (заполняется из Firebase)
+const WD = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const WD_SHORT = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+const MON = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+const PREF = { hw:'notifHW', schedule:'notifSched', grades:'notifGrades', ann:'notifAnn', chat:'notifChat' };
+const SECTION_TYPE = { homework:'hw', schedule:'schedule', journal:'grades', grades:'grades', announcements:'ann', 'chat-section':'chat' };
+const HASH_ROUTE = { '#homework':'hw', '#schedule':'schedule', '#journal':'journal', '#grades':'journal', '#announcements':'news', '#chat-section':'chat' };
+
+/* ═══════════════ ХЕЛПЕРЫ ═══════════════ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
+const pad = n => String(n).padStart(2, '0');
+const LS = {
+  get(k, d = '') { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+  json(k) { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (e) { return {}; } }
+};
+const SS = {
+  get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+const PAL = [['#1E7BFF','#E6F0FF'],['#1FB26F','#E3F7EE'],['#FF9433','#FFF0E0'],['#7C5CFA','#EEEAFF'],['#EF4F4F','#FFE9E8'],['#12B5C9','#DFF6F9']];
+const hash = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+const pal = s => PAL[hash(s) % PAL.length];
+const cv = p => `--c:${p[0]};--bg-c:${p[1]}`;
+const initials = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+const avatar = (n, size = 40) => `<span class="av" style="${cv(pal(n))};width:${size}px;height:${size}px;font-size:${Math.round(size * .36)}px">${esc(initials(n))}</span>`;
+
+const I = {
+  home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  book:'<path d="M2.5 5.5C5 4.4 8.5 4.6 12 6.5v13c-3.5-1.9-7-2.1-9.5-1z"/><path d="M21.5 5.5c-2.5-1.1-6-.9-9.5 1v13c3.5-1.9 7-2.1 9.5-1z"/>',
+  check:'<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="m8 12.2 3 3 5-6"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14c2.5 0 4.5 1.8 4.5 4.5"/>',
+  dots:'<circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/>',
+  cal:'<rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  bell:'<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21h4"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+  right:'<path d="m9 5 7 7-7 7"/>', left:'<path d="m15 5-7 7 7 7"/>', plus:'<path d="M12 5v14M5 12h14"/>',
+  mega:'<path d="M4 10v4h3l8 4V6L7 10z"/><path d="M18.5 9.5a4 4 0 0 1 0 5"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.01"/>',
+  alert:'<path d="M12 3.5 22 20H2z"/><path d="M12 10v4.5M12 17.4v.01"/>',
+  star:'<path d="m12 3 2.8 6 6.2.8-4.5 4.4 1.2 6.8-5.7-3.3L6.3 21l1.2-6.8L3 9.8 9.2 9z"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>',
+  shield:'<path d="M12 3 20 6v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6z"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.6a2.6 2.6 0 1 1 3.6 2.4c-.7.4-1.1.9-1.1 1.7M12 17v.01"/>',
+  logout:'<circle cx="12" cy="12" r="9"/><path d="m11 8-4 4 4 4M7 12h10"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>',
+  send:'<path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/>',
+  msg:'<path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>',
+  wallet:'<rect x="3" y="6" width="18" height="14" rx="3.5"/><path d="M3 10.5h18M16 15h2"/>',
+  clip:'<rect x="5" y="4" width="14" height="17" rx="3.5"/><path d="M9 4h6v3H9zM9 12h6M9 16h4"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  reply:'<path d="M10 8 4 13l6 5v-3.5c5 0 8 1 10 4-.5-5-3.5-8.5-10-8.5z"/>',
+  cap:'<path d="M2 9 12 4l10 5-10 5z"/><path d="M6 11.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5"/><path d="M22 9v6"/>',
+  pencil:'<path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19z"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/>',
+  flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/>'
+};
+const ic = (n, sz = 22, sw = 1.9) => `<svg class="ic" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n] || ''}</svg>`;
+
+/* даты */
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseYMD = s => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); };
+const fmtLong = d => d.getDate() + ' ' + d.toLocaleDateString('ru-RU', { month: 'long' });
+const fmtShort = d => d.getDate() + ' ' + MON[d.getMonth()];
+const startOfDay = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+function tl(ts) {
+  const d = new Date(ts), t = startOfDay(new Date()), dd = startOfDay(d);
+  const diff = Math.round((t - dd) / 86400000), hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  if (diff === 0) return 'Сегодня, ' + hm;
+  if (diff === 1) return 'Вчера, ' + hm;
+  return fmtShort(d);
+}
+const fmtTime = t => String(t).replace('–', ' – ').split(' – ').map(x => { const p = x.trim().split(':'); return pad(p[0]) + ':' + p[1]; }).join(' – ');
+const timeRange = t => String(t).replace(/\s/g, '').split('–').map(x => { const p = x.split(':').map(Number); return p[0] * 60 + p[1]; });
+const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер'; };
+const fmtN = x => (Math.round(x * 10) / 10).toFixed(1).replace('.', ',');
+const gcls = n => { n = Number(n); return !isFinite(n) || n <= 0 ? '' : n >= 8 ? 'g-hi' : n >= 6 ? 'g-mid' : n >= 4 ? 'g-low' : 'g-bad'; };
+const subjPal = s => pal('s:' + norm(s));
+
+/* ═══════════════ СОСТОЯНИЕ ═══════════════ */
+const DB = window.firebaseDB || null;
+const D = { classes:{}, classesLoaded:false, j:{ subjects:[], journal:{} }, hw:[], att:{}, pay:{}, ann:[], changes:[], chat:{} };
+let RAW_J = null;
+const S = { route:'', params:{}, stack:[], jsub:'all', jsort:'alpha', hwf:'all', day:null, cq:'', ctab:'students', nf:'all', reply:null, edit:null, chatStick:true };
+
+const me = () => LS.get('chat_name', '');
+const isDirector = () => SS.get('director') === '1';
+const isTeacher = () => SS.get('teacher') === '1' || isDirector();
+const roleName = () => isDirector() ? 'Директор' : isTeacher() ? 'Учитель' : 'Ученик';
+const curCid = () => LS.get('cid', '');
+const cls = () => D.classes[curCid()] || null;
+const cname = () => (cls() && cls().name) || 'Класс';
+const classList = () => Object.values(D.classes).sort((a, b) => String(a.name).localeCompare(String(b.name), 'ru', { numeric: true }));
+const R = p => DB.ref('cdata/' + curCid() + '/' + p);
+const studWord = n => { const a = n % 100, b = n % 10; return n + (a > 10 && a < 15 ? ' учеников' : b === 1 ? ' ученик' : b > 1 && b < 5 ? ' ученика' : ' учеников'); };
+const badge = n => String(n || '').replace(/[«»"'\s]/g, '').slice(0, 4).toUpperCase();
+const firstName = () => { const n = me().trim().split(/\s+/); return isDirector() ? 'Директор' : isTeacher() && !ST.includes(me()) ? 'Учитель' : (n[1] || n[0] || 'друг'); };
+function myStudent() {
+  const n = norm(me()); if (!n) return '';
+  return ST.find(s => { const x = norm(s); return x === n || n.split(' ').every(t => x.split(' ').includes(t)); }) || '';
+}
+const toast = (() => { let t; return m => { const el = $('#toast'); el.textContent = m; el.classList.add('on'); clearTimeout(t); t = setTimeout(() => el.classList.remove('on'), 2400); }; })();
+const needDB = noClass => { if (!DB) { toast('Нет связи с базой данных'); return false; } if (!noClass && !curCid()) { toast('Сначала откройте класс'); return false; } return true; };
+
+/* ── журнал ── */
+function normJournal(val) {
+  const out = { subjects: [], journal: {} };
+  if (!val) return out;
+  let subs = val.subjects; if (subs && !Array.isArray(subs)) subs = Object.values(subs);
+  subs = (subs || []).filter(Boolean); out.subjects = subs;
+  subs.forEach(s => {
+    const j = (val.journal && val.journal[s]) || {};
+    let dates = j.dates; if (dates && !Array.isArray(dates)) dates = Object.values(dates); dates = dates || [];
+    const grades = {};
+    ST.forEach(n => {
+      let g = (j.grades && j.grades[n]) || [];
+      if (!Array.isArray(g)) { const a = []; Object.keys(g).forEach(k => { a[+k] = g[k]; }); g = a; }
+      const row = []; for (let i = 0; i < dates.length; i++) row.push(g[i] == null ? null : g[i]);
+      grades[n] = row;
+    });
+    out.journal[s] = { dates, grades };
+  });
+  return out;
+}
+const nums = (s, n) => ((D.j.journal[s] && D.j.journal[s].grades[n]) || []).map(Number).filter(x => isFinite(x) && x > 0);
+function avg(s, n) { const v = nums(s, n); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }
+function overall(n) { const v = D.j.subjects.map(s => avg(s, n)).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }
+function ranking() { return ST.map(n => ({ n, a: overall(n) })).filter(x => x.a != null).sort((a, b) => b.a - a.a); }
+function rankOf(n) { const r = ranking(), i = r.findIndex(x => x.n === n); return i < 0 ? null : { pos: i + 1, total: r.length }; }
+function classAvg(s) { const v = ST.map(n => avg(s, n)).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }
+const absOf = n => (D.att[n] && Number(D.att[n].absences)) || 0;
+const paidOf = n => (D.pay[n] && Number(D.pay[n].paid)) || 0;
+function abbr(s) {
+  const m = { 'Математика':'Матем.', 'Английский':'Англ.', 'Английский язык':'Англ.', 'Русский':'Рус. яз.', 'Русский язык':'Рус. яз.', 'Информатика':'Информ.', 'История':'Истор.', 'Литература':'Литер.' };
+  return m[s] || (s.length > 7 ? s.slice(0, 6) + '.' : s);
+}
+function allSubjects() {
+  const s = [...D.j.subjects];
+  Object.values(SCHEDULE).forEach(day => day.forEach(l => { if (!s.some(x => norm(x) === norm(l[0]))) s.push(l[0]); }));
+  return s;
+}
+
+function normSchedule(v) {
+  const out = {}; if (!v) return out;
+  Object.keys(v).forEach(k => { const d = k.replace('d', ''), a = (Array.isArray(v[k]) ? v[k] : Object.values(v[k] || {})).filter(Boolean).map(String); if (a.length) out[d] = a.map((n, i) => [n, i]); });
+  return out;
+}
+/* ── расписание ── */
+const weekStart = () => { const t = startOfDay(new Date()), w = t.getDay(); const d = new Date(t); d.setDate(t.getDate() + (w === 0 ? 1 : 1 - w)); return d; };
+const dateOfDow = dow => { const d = weekStart(); d.setDate(d.getDate() + dow - 1); return d; };
+function lessonsFor(date) {
+  const base = (SCHEDULE[date.getDay()] || []).map((l, i) => ({ n: i + 1, name: l[0], time: l[2] || TIMES[l[1]], status: '', note: '' }));
+  D.changes.filter(c => c.date === ymd(date)).forEach(c => {
+    const n = +c.lesson, it = base.find(x => x.n === n);
+    if (!it) { if (!c.cancel && c.newSubject) base.push({ n, name: c.newSubject, time: TIMES[n - 1] || '', status: 'changed', note: 'Дополнительный урок' }); return; }
+    if (c.cancel) { it.status = 'cancel'; it.note = 'Урок отменён'; }
+    else { it.note = 'Было: ' + it.name; it.name = c.newSubject; it.status = 'changed'; }
+  });
+  return base.sort((a, b) => a.n - b.n);
+}
+function nextLesson() {
+  const now = new Date();
+  for (let k = 0; k < 8; k++) {
+    const d = new Date(now); d.setDate(now.getDate() + k);
+    if (d.getDay() === 0) continue;
+    const mins = k === 0 ? now.getHours() * 60 + now.getMinutes() : -1;
+    const l = lessonsFor(d).find(x => x.status !== 'cancel' && x.time && timeRange(x.time)[0] > mins);
+    if (l) return { l, d, k };
+  }
+  return null;
+}
+
+/* ═══════════════ FIREBASE: подписки ═══════════════ */
+let rq = 0;
+function refresh() {
+  if (rq) return;
+  rq = requestAnimationFrame(() => { rq = 0; const R = ROUTES[S.route]; if (R && R.fill) R.fill(S.params); updateDots(); });
+}
+const arr = v => !v ? [] : (Array.isArray(v) ? v : Object.values(v)).filter(Boolean);
+const subs = [];
+function on(ref, ev, fn) { ref.on(ev, fn); subs.push([ref, ev, fn]); }
+function unlisten() {
+  subs.forEach(x => x[0].off(x[1], x[2])); subs.length = 0;
+  Object.assign(D, { j:{ subjects:[], journal:{} }, hw:[], att:{}, pay:{}, ann:[], changes:[], chat:{} }); RAW_J = null; SCHEDULE = {};
+}
+function rebuildStudents() {
+  const c = cls(), list = c ? c.students.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru')) : [];
+  ST = list.map(s => s.name);
+  Object.keys(PHONE).forEach(k => delete PHONE[k]); list.forEach(s => { PHONE[s.name] = s.phone || ''; });
+  if (RAW_J) D.j = normJournal(RAW_J);
+}
+function setClass(id) { if (curCid() !== id) { LS.set('cid', id); listenClass(id); } rebuildStudents(); }
+function listenClasses() {
+  if (!DB) return;
+  DB.ref('classes').on('value', s => {
+    const v = s.val() || {}; D.classes = {}; D.classesLoaded = true;
+    Object.keys(v).forEach(k => {
+      const c = v[k]; if (!c || typeof c !== 'object') return;
+      const st = c.students || {};
+      D.classes[k] = { id: k, name: c.name || 'Без названия', teacher: c.teacher || null,
+        students: Object.keys(st).map(i => Object.assign({ id: i }, st[i])).filter(x => x && x.name) };
+    });
+    const cid = curCid();
+    if (cid && !D.classes[cid]) {
+      LS.del('cid'); unlisten();
+      if (!isDirector() && me()) { LS.del('chat_name'); LS.del('login_user'); rebuildStudents(); go('welcome', {}, { tab: true }); toast('Класс удалён директором'); return; }
+    }
+    rebuildStudents(); refreshLogin(); refresh();
+  });
+}
+function listenClass(cid) {
+  if (!DB) return; unlisten();
+  if (cid) {
+    const b = DB.ref('cdata/' + cid);
+    on(b.child('journal'), 'value', s => { RAW_J = s.val(); D.j = normJournal(RAW_J); refresh(); });
+    on(b.child('homework'), 'value', s => { D.hw = arr(s.val()); refresh(); });
+    on(b.child('attendance'), 'value', s => { D.att = {}; arr(s.val()).forEach(x => { if (x.name) D.att[x.name] = x; }); refresh(); });
+    on(b.child('payment'), 'value', s => { D.pay = s.val() || {}; refresh(); });
+    on(b.child('announcements'), 'value', s => { D.ann = arr(s.val()).sort((a, b) => (b.ts || 0) - (a.ts || 0)); refresh(); });
+    on(b.child('schedule_changes'), 'value', s => { D.changes = arr(s.val()).sort((a, b) => (b.ts || 0) - (a.ts || 0)); refresh(); });
+    on(b.child('schedule'), 'value', s => { SCHEDULE = normSchedule(s.val()); refresh(); });
+    const chat = b.child('chat').limitToLast(100);
+    on(chat, 'child_added', s => { const m = s.val(); if (m) { m._k = s.key; D.chat[s.key] = m; refresh(); } });
+    on(chat, 'child_changed', s => { const m = s.val(); if (m) { m._k = s.key; D.chat[s.key] = m; refresh(); } });
+    on(chat, 'child_removed', s => { delete D.chat[s.key]; refresh(); });
+    let first = true;
+    on(b.child('notify_trigger'), 'value', s => {
+      if (first) { first = false; return; }
+      const d = s.val(); if (!d || !d.ts || d.ts <= lastTs) return;
+      lastTs = d.ts; try { handleNotify(d); } catch (e) {}
+    });
+  }
+  rebuildStudents();
+}
+
+/* ═══════════════ УВЕДОМЛЕНИЯ (push на открытом сайте) ═══════════════ */
+let lastTs = 0, gradeQ = [], gradeT = null;
+const catAllowed = t => { const k = PREF[t]; return !k || LS.json('st_settings')[k] !== false; };
+const masterOn = () => LS.json('myp_settings').notifs !== false;
+const notifsEnabled = () => masterOn() && 'Notification' in window && Notification.permission === 'granted';
+async function showNative(title, body, tag, section) {
+  if (!notifsEnabled()) return;
+  const opts = { body: body || '', icon: ICON, badge: ICON, tag: tag || ('site-' + Date.now()), renotify: true, data: { section: section || '', url: './' + (section ? '#' + section : '') } };
+  try {
+    if ('serviceWorker' in navigator) { const reg = await navigator.serviceWorker.getRegistration(); if (reg && reg.showNotification) { await reg.showNotification(title, opts); return; } }
+  } catch (e) {}
+  try { const n = new Notification(title, opts); n.onclick = () => { window.focus(); n.close(); }; setTimeout(() => { try { n.close(); } catch (e) {} }, 10000); } catch (e) {}
+}
+function handleNotify(d) {
+  const type = d.type || SECTION_TYPE[d.section] || 'other';
+  if (!catAllowed(type)) return;
+  let title = d.title || '🔔 Обновление на сайте', body = d.body || '';
+  if (type === 'grades' && Array.isArray(d.grades) && d.grades.length) {
+    const mine = d.grades.filter(g => g && myStudent() && norm(g.n) === norm(myStudent()));
+    if (!mine.length) return;
+    title = mine.length === 1 ? '🏆 Новая оценка' : '🏆 Новые оценки';
+    body = mine.map(g => g.s + ' — ' + g.g).join('\n');
+  }
+  showNative(title, body, 'site-' + d.ts, d.section);
+  toast(title.replace(/^\S+\s/, ''));
+}
+function sendNotify(p) {
+  if (!DB || !curCid()) return;
+  let ts = Date.now(); if (ts <= lastTs) ts = lastTs + 1; p.ts = ts; lastTs = ts;
+  R('notify_trigger').set(p).catch(() => {});
+}
+function queueGrade(o) {
+  gradeQ.push(o); clearTimeout(gradeT);
+  gradeT = setTimeout(() => {
+    const list = gradeQ.slice(0, 40), total = gradeQ.length; gradeQ = []; if (!total) return;
+    const subs = []; list.forEach(x => { if (!subs.includes(x.s)) subs.push(x.s); });
+    sendNotify({ type:'grades', section:'grades', grades:list,
+      title: total === 1 ? '🏆 Новая оценка' : '🏆 Новые оценки',
+      body: total === 1 ? `${list[0].s}: ${list[0].n} — ${list[0].g}` : `Выставлено оценок: ${total} (${subs.slice(0, 3).join(', ')})` });
+  }, 3000);
+}
+
+/* лента уведомлений на экране «Уведомления» */
+function buildFeed() {
+  const out = [], mine = myStudent();
+  D.hw.forEach(t => { const ts = +t.id || 0; if (ts > 1e11) out.push({ cat:'hw', ts, ico:'check', p:PAL[2], title:'Новое домашнее задание', sub:`${t.subject} • ${t.title}`, go:'hw' }); });
+  D.changes.forEach(c => out.push({ cat:'sched', ts:c.ts || 0, ico:'alert', p:PAL[4], title:'Изменение в расписании', sub:c.text, go:'schedule' }));
+  D.ann.forEach(a => out.push({ cat:'ann', ts:a.ts || 0, ico:'mega', p:PAL[2], title:'Объявление', sub:a.title, go:'news' }));
+  Object.values(D.chat).filter(m => m.type !== 'system' && m.sender !== me()).sort((a, b) => b.ts - a.ts).slice(0, 5)
+    .forEach(m => out.push({ cat:'chat', ts:m.ts || 0, ico:'msg', p:PAL[0], title:'Сообщение в чате', sub:`${m.sender}: ${m.text}`, go:'chat' }));
+  if (mine) {
+    const today = ymd(new Date());
+    D.j.subjects.forEach(s => { const j = D.j.journal[s]; (j.dates || []).forEach((d, i) => {
+      const g = j.grades[mine] && j.grades[mine][i];
+      if (g != null && g !== '' && d <= today) out.push({ cat:'grades', ts:parseYMD(d).getTime() + 12 * 3600e3, ico:'star', p:PAL[1], title:'Поставлена оценка', sub:`${s} • ${g}`, go:'journal' });
+    }); });
+  }
+  return out.filter(x => x.ts).sort((a, b) => b.ts - a.ts).slice(0, 40);
+}
+function updateDots() {
+  const annNew = D.ann.some(a => (a.ts || 0) > +LS.get('ann_seen', 0));
+  const t = $('#tdotMore'); if (t) t.classList.toggle('on', annNew);
+  const feed = buildFeed(), seen = +LS.get('notif_seen', 0);
+  const b = $('#bellDot'); if (b) b.classList.toggle('on', feed.some(x => x.ts > seen && x.ts <= Date.now() + 1e5));
+}
+
+/* ═══════════════ НАВИГАЦИЯ ═══════════════ */
+const TABS = [['home','Главная','home'],['journal','Журнал','book'],['hw','ДЗ','check'],['classes','Классы','users'],['more','Ещё','dots']];
+const ROUTES = {};
+function renderTabbar(active) {
+  $('#tabbar').innerHTML = TABS.map(t => `<button class="tab ${t[0] === active ? 'on' : ''}" data-act="tab" data-r="${t[0]}" aria-label="${t[1]}"><span class="ti">${ic(t[2], 20, 2)}</span>${t[1]}${t[0] === 'more' ? '<i class="tdot" id="tdotMore"></i>' : ''}</button>`).join('');
+}
+function render() {
+  const R = ROUTES[S.route], v = $('#view');
+  v.className = R.cls || '';
+  if (NEEDS_CLASS.includes(S.route) && !curCid()) {
+    v.className = '';
+    v.innerHTML = `${header('Класс не выбран')}<div class="card">${empty('Откройте класс', isDirector() ? 'Выберите класс во вкладке «Классы»' : 'Войдите заново и выберите свой класс')}</div><div style="margin-top:12px"><button class="btn" data-act="tab" data-r="classes">К списку классов</button></div>`;
+    $('#tabbar').classList.remove('hide'); renderTabbar('classes'); updateDots(); return;
+  }
+  v.innerHTML = R.shell(S.params);
+  v.scrollTop = 0;
+  const bar = $('#tabbar'); bar.classList.toggle('hide', R.bar === false);
+  if (R.bar !== false) renderTabbar(R.tab);
+  if (R.fill) R.fill(S.params);
+  if (R.after) R.after(S.params);
+  updateDots();
+}
+function go(r, p = {}, o = {}) {
+  if (!ROUTES[r]) return;
+  if (o.tab) S.stack = [];
+  else if (!o.replace && S.route) { S.stack.push({ r: S.route, p: S.params }); try { history.pushState({ d: S.stack.length }, ''); } catch (e) {} }
+  S.route = r; S.params = p; render();
+}
+function back() { if (S.stack.length) history.back(); else go('home', {}, { tab: true }); }
+window.addEventListener('popstate', () => { const f = S.stack.pop(); if (f) { S.route = f.r; S.params = f.p; render(); } });
+
+/* ═══════════════ ШТОРКИ ═══════════════ */
+function sheet(title, body, sub) {
+  closeSheet();
+  const el = document.createElement('div'); el.className = 'sbg'; el.dataset.act = 'sheetbg';
+  el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${title ? `<h2>${title}</h2>` : ''}${sub ? `<p class="ssub">${sub}</p>` : ''}${body}</div>`;
+  $('#sheetRoot').appendChild(el); requestAnimationFrame(() => el.classList.add('on'));
+}
+function closeSheet() { $('#sheetRoot').innerHTML = ''; }
+const classOptions = sel => '<option value="">Выберите класс…</option>' + classList().map(c => `<option value="${esc(c.id)}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+function askTeacher(cb, withClass, pre) {
+  if (withClass && !classList().length) { sheet('Режим учителя', `<p class="ssub" style="margin-top:-6px">Классов пока нет. Их создаёт директор.</p>`); return; }
+  window.__tcb = cb;
+  sheet('Режим учителя', `<p class="ssub" style="margin-top:-6px">Введите пароль, чтобы добавлять оценки, ДЗ и объявления.</p>
+    ${withClass ? `<label class="field"><span>Класс</span><select class="inp" id="tcls">${classOptions(pre || '')}</select></label><p class="err" id="tcerr">Выберите класс</p>` : ''}
+    <label class="field"><span>Пароль</span><input class="inp" id="tpass" type="password" inputmode="numeric" autocomplete="off" placeholder="••••"/></label>
+    <p class="err" id="terr">Неверный пароль</p>
+    <button class="btn" data-act="tsubmit">Войти</button>`);
+  setTimeout(() => { const i = $('#tpass'); if (i) i.focus(); }, 280);
+}
+const needTeacher = fn => isTeacher() ? fn() : askTeacher(fn);
+function askDirector(cb) {
+  window.__dcb = cb;
+  sheet('Вход директора', `<p class="ssub" style="margin-top:-6px">Введите пароль директора, чтобы создавать классы, добавлять классных руководителей и учеников.</p>
+    <label class="field"><span>Пароль</span><input class="inp" id="dpass" type="password" autocomplete="off" placeholder="••••••••"/></label>
+    <p class="err" id="derr">Неверный пароль</p>
+    <button class="btn" data-act="dsubmit">Войти</button>`);
+  setTimeout(() => { const i = $('#dpass'); if (i) i.focus(); }, 280);
+}
+const needDirector = fn => isDirector() ? fn() : askDirector(fn);
+function fillLoginNames() {
+  const sel = $('#lname'); if (!sel) return;
+  const c = D.classes[($('#lcls') || {}).value], list = c ? c.students.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru')) : [];
+  sel.innerHTML = !c ? '<option value="">Сначала выберите класс</option>' : list.length ? '<option value="">Выберите имя…</option>' + list.map(s => `<option>${esc(s.name)}</option>`).join('') : '<option value="">В классе пока нет учеников</option>';
+}
+function refreshLogin() {
+  if ($('#lempty') && classList().length) { ACT.loginSheet(); return; }
+  const s = $('#lcls'); if (!s) return;
+  const v = s.value, n = ($('#lname') || {}).value; s.innerHTML = classOptions(v); fillLoginNames();
+  if (n && $('#lname')) $('#lname').value = n;
+}
+const fld = (id, label, val, ph) => `<label class="field"><span>${label}</span><input class="inp" id="${id}" maxlength="40" value="${esc(val || '')}" placeholder="${esc(ph || '')}"/></label>`;
+const fldPhone = val => `<label class="field"><span>Номер телефона</span><input class="inp" id="phn" type="tel" inputmode="tel" maxlength="20" value="${esc(val || '')}" placeholder="+992 00 000 0000"/></label>`;
+const badKey = s => /[.#$\[\]\/]/.test(s);
+const badPhone = s => s && !/^[+\d][\d\s()\-]{5,}$/.test(s);
+const fullName = (l, f, m) => [l, f, m].filter(Boolean).join(' ');
+function studentSheet(r) {
+  r = r || {};
+  sheet(r.id ? 'Изменить ученика' : 'Новый ученик', `${fld('sl', 'Фамилия', r.last, 'Иванов')}${fld('sf', 'Имя', r.first, 'Иван')}${fld('sm', 'Отчество', r.middle, 'Иванович')}${fldPhone(r.phone)}
+    <p class="err" id="sterr"></p><button class="btn" data-act="stusave" data-id="${esc(r.id || '')}">${r.id ? 'Сохранить' : 'Добавить ученика'}</button>`);
+}
+const stuAdmin = n => {
+  if (!isDirector() || !cls()) return '';
+  const r = cls().students.find(s => s.name === n); if (!r) return '';
+  return `<div class="jbtns" style="margin-top:16px"><button class="btn sm" data-act="stuedit" data-id="${esc(r.id)}">${ic('pencil', 16)} Изменить</button><button class="btn sm ghost" data-act="studel" data-id="${esc(r.id)}" style="color:var(--red)">${ic('trash', 16)} Удалить</button></div>`;
+};
+/* перенос/удаление данных ученика (оценки, прогулы, оплата), если nu = null — удаление */
+function moveStudent(old, nu) {
+  const up = {}, b = 'cdata/' + curCid() + '/', key = n => n.replace(/\s+/g, '_');
+  D.j.subjects.forEach(s => {
+    const g = D.j.journal[s] && D.j.journal[s].grades[old];
+    if (nu && g && g.some(x => x != null)) up[b + 'journal/journal/' + s + '/grades/' + nu] = g;
+    up[b + 'journal/journal/' + s + '/grades/' + old] = null;
+  });
+  if (D.att[old]) { if (nu) up[b + 'attendance/' + key(nu)] = Object.assign({}, D.att[old], { name: nu }); up[b + 'attendance/' + key(old)] = null; }
+  if (D.pay[old]) { if (nu) up[b + 'payment/' + nu] = D.pay[old]; up[b + 'payment/' + old] = null; }
+  return up;
+}
+function schSheet(day) {
+  const cur = (SCHEDULE[day] || []).map(l => l[0]).join('\n');
+  sheet('Расписание класса', `<p class="ssub" style="margin-top:-6px">По одному предмету на строке — в порядке уроков (до 7).</p>
+    <label class="field"><span>День недели</span><select class="inp" id="sd" data-ch="schday">${[1, 2, 3, 4, 5, 6].map(d => `<option value="${d}" ${d === day ? 'selected' : ''}>${WD[d]}</option>`).join('')}</select></label>
+    <label class="field"><span>Уроки</span><textarea class="inp" id="sl2" rows="7" placeholder="Алгебра&#10;Русский язык&#10;Химия">${esc(cur)}</textarea></label>
+    <button class="btn" data-act="schdaysave">Сохранить день</button>`);
+}
+function homeClassCard() {
+  if (isDirector()) return `<button class="class-card" data-act="tab" data-r="classes"><span class="badge">${ic('shield', 22, 2)}</span><span style="flex:1"><div class="t">Управление школой</div><div class="s">${SCHOOL} · классов: ${classList().length}</div></span><span class="muted">${ic('right', 18, 2.2)}</span></button>`;
+  const c = cls(); if (!c) return '';
+  return `<button class="class-card" data-act="go" data-r="class"><span class="badge">${esc(badge(c.name))}</span><span style="flex:1"><div class="t">${esc(c.name)}</div><div class="s">${SCHOOL} · ${studWord(ST.length)}</div></span><span class="muted">${ic('right', 18, 2.2)}</span></button>`;
+}
+const profRow = (act, label) => `<button class="row" data-act="${act}"><span class="mic">${ic('shield', 21)}</span><span class="grow t">${label}</span><span class="chev">${ic('right', 16, 2.2)}</span></button>`;
+function profRows() {
+  if (isDirector()) return profRow('dout', 'Выйти из режима директора');
+  return (isTeacher() ? profRow('tout', 'Выйти из режима учителя') : profRow('tlogin', 'Режим учителя')) + profRow('dlogin', 'Режим директора');
+}
+const NEEDS_CLASS = ['journal', 'hw', 'schedule', 'news', 'chat', 'chatroom', 'pay', 'att'];
+
+/* ═══════════════ ЭКРАНЫ ═══════════════ */
+const header = (title, o = {}) => `<header class="top ${o.back ? 'top-back' : ''}">${o.back ? `<button class="ib" data-act="back" aria-label="Назад">${ic('left', 22, 2.2)}</button>` : ''}<h1>${title}</h1><div class="top-r">${o.right || ''}</div></header>`;
+const empty = (t, s) => `<div class="empty"><b>${t}</b>${s || ''}</div>`;
+
+/* ── Приветствие ── */
+function schoolSVG() {
+  let win = '';
+  [46, 74, 102, 240, 268, 296].forEach(x => [110, 148].forEach(y => { win += `<rect x="${x}" y="${y}" width="18" height="24" rx="2" fill="#8FB4EE"/><rect x="${x + 2}" y="${y + 2}" width="14" height="9" fill="#B9D2F7"/>`; }));
+  let cols = ''; for (let i = 0; i < 4; i++) cols += `<rect x="${142 + i * 25}" y="104" width="9" height="96" fill="#fff"/>`;
+  return `<svg class="school" viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5E9BFF" stop-opacity="0"/><stop offset=".55" stop-color="#A9CBFF"/><stop offset="1" stop-color="#D6E8FF"/></linearGradient></defs>
+  <rect width="360" height="250" fill="url(#sk)"/>
+  <ellipse cx="62" cy="62" rx="34" ry="11" fill="#fff" opacity=".75"/><ellipse cx="86" cy="54" rx="24" ry="10" fill="#fff" opacity=".75"/>
+  <ellipse cx="300" cy="46" rx="30" ry="9" fill="#fff" opacity=".7"/>
+  <rect x="179" y="30" width="2.5" height="42" fill="#fff"/><path d="M181.5 31h26l-6 7 6 7h-26z" fill="#FF6B5E"/>
+  <rect x="34" y="94" width="292" height="108" fill="#ECF1F8"/><rect x="34" y="88" width="292" height="8" fill="#C9D4E5"/>
+  <rect x="128" y="68" width="104" height="134" fill="#F8FAFD"/><rect x="122" y="62" width="116" height="9" fill="#BFCBE0"/>
+  ${win}${cols}<rect x="168" y="152" width="24" height="50" rx="3" fill="#5B6F94"/><rect x="171" y="156" width="8" height="42" fill="#7F93B6"/><rect x="181" y="156" width="8" height="42" fill="#7F93B6"/>
+  <rect x="150" y="196" width="60" height="6" fill="#D8E0EE"/>
+  <rect y="202" width="360" height="48" fill="#79BB66"/><path d="M168 202h24l34 48H134z" fill="#E4E8F0"/>
+  <rect x="22" y="168" width="7" height="40" fill="#7A5A3A"/><circle cx="26" cy="158" r="26" fill="#4E9F58"/><circle cx="14" cy="170" r="16" fill="#5DB067"/>
+  <rect x="334" y="170" width="7" height="40" fill="#7A5A3A"/><circle cx="338" cy="160" r="26" fill="#4E9F58"/><circle cx="350" cy="172" r="15" fill="#5DB067"/>
+  <circle cx="92" cy="212" r="12" fill="#5DB067"/><circle cx="268" cy="212" r="12" fill="#5DB067"/>
+  </svg>`;
+}
+ROUTES.welcome = {
+  bar: false, cls: 'bare',
+  shell: () => `<div class="welcome"><div class="wcard"><span class="cap">${ic('cap', 56, 1.7)}</span><h1>Моя Школа</h1><p>Учись. Развивайся. Достигай.</p>${schoolSVG()}</div>
+    <div class="wbtns"><button class="btn" data-act="loginSheet">Войти</button><button class="btn ghost" data-act="createSheet">Создать аккаунт</button></div></div>`
+};
+
+/* ── Главная ── */
+ROUTES.home = {
+  tab: 'home',
+  shell: () => `<div class="home-top"><h1>Моя Школа</h1><div class="home-r">
+      <button class="ib" data-act="go" data-r="notifs" aria-label="Уведомления">${ic('bell', 23)}<i class="dot" id="bellDot"></i></button>
+      <button class="av-btn" data-act="go" data-r="profile" aria-label="Профиль">${avatar(me() || '?', 38)}</button></div></div>
+    ${DB ? '' : '<div class="note">Нет связи с базой данных. Проверьте интернет и обновите страницу.</div>'}
+    <div class="hello"><p class="hi">${greet()},<br><b>${esc(firstName())}!</b></p><p class="muted">Сегодня, ${fmtLong(new Date())}</p></div>
+    <div id="homeClass"></div>
+    <div class="tiles">
+      <button class="tile" style="${cv(['#6C5CE7','#EEEAFF'])}" data-act="go" data-r="schedule"><span class="tile-ic">${ic('cal', 22)}</span><span>Расписание</span></button>
+      <button class="tile" style="${cv(['#1FB26F','#E3F7EE'])}" data-act="tab" data-r="journal"><span class="tile-ic">${ic('book', 22)}</span><span>Журнал</span></button>
+      <button class="tile" style="${cv(['#FF9433','#FFF0E0'])}" data-act="tab" data-r="hw"><span class="tile-ic">${ic('check', 22)}</span><span>Домашние задания</span></button>
+      <button class="tile" style="${cv(['#1769FF','#E6F0FF'])}" data-act="tab" data-r="classes"><span class="tile-ic">${ic('users', 22)}</span><span>Классы</span></button>
+    </div>
+    <div id="homeStats"></div>
+    <div class="sec"><h3>Ближайшие события</h3><button class="lnk" data-act="go" data-r="notifs">Все</button></div>
+    <div id="homeEv" class="list"></div>`,
+  fill() {
+    const hc = $('#homeClass'); if (hc) hc.innerHTML = homeClassCard();
+    const mine = myStudent(), st = $('#homeStats');
+    if (st) {
+      if (mine && overall(mine) != null) {
+        const r = rankOf(mine);
+        st.innerHTML = `<div class="sec"><h3>Моя успеваемость</h3></div><div class="stats">
+          <div class="card stat"><b>${fmtN(overall(mine))}</b><small>Средний балл</small></div>
+          <div class="card stat"><b>${r ? r.pos + ' из ' + r.total : '—'}</b><small>Место в классе</small></div>
+          <div class="card stat"><b>${absOf(mine)}</b><small>Прогулы</small></div></div>`;
+      } else st.innerHTML = '';
+    }
+    const ev = [], nl = nextLesson();
+    if (nl) { const when = nl.k === 0 ? 'Сегодня' : nl.k === 1 ? 'Завтра' : WD[nl.d.getDay()];
+      ev.push({ ico:'cal', p:PAL[3], t:'Следующий урок: ' + nl.l.name, s:`${when}, ${fmtTime(nl.l.time).split(' – ')[0]} · урок ${nl.l.n}`, go:'schedule' }); }
+    const today = startOfDay(new Date());
+    const hw = D.hw.filter(t => !t.done && (!t.due || parseYMD(t.due) >= today)).sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1)[0];
+    if (hw) ev.push({ ico:'check', p:PAL[2], t:`${hw.subject}: ${hw.title}`, s: hw.due ? 'Срок: ' + fmtLong(parseYMD(hw.due)) : 'Без срока', go:'hw', tab:1 });
+    const an = D.ann[0];
+    if (an) ev.push({ ico:'mega', p:PAL[4], t:an.title, s:fmtLong(new Date(an.ts)), go:'news' });
+    const el = $('#homeEv'); if (!el) return;
+    el.innerHTML = ev.length ? ev.map(e => `<button class="card row" data-act="${e.tab ? 'tab' : 'go'}" data-r="${e.go}"><span class="tile-ic sm" style="${cv(e.p)}">${ic(e.ico, 19)}</span><span class="grow"><div class="t">${esc(e.t)}</div><div class="s">${esc(e.s)}</div></span><span class="chev">${ic('right', 16, 2.2)}</span></button>`).join('')
+      : `<div class="card">${empty('Пока тихо', 'Здесь появятся уроки, ДЗ и объявления')}</div>`;
+  }
+};
+
+/* ── Список классов ── */
+ROUTES.classes = {
+  tab: 'classes',
+  shell: () => `${header('Классы')}<label class="search">${ic('search', 18)}<input data-in="clsq" placeholder="Поиск класса…" value="${esc(S.cq)}"/></label><div id="clsList" class="list"></div>
+    ${isDirector() ? `<div class="bottom-cta"><button class="btn" data-act="clsadd">${ic('plus', 18, 2.4)} Создать класс</button></div>` : ''}`,
+  fill() {
+    const el = $('#clsList'); if (!el) return;
+    let list = isDirector() ? classList() : classList().filter(c => c.id === curCid());
+    const q = norm(S.cq); if (q) list = list.filter(c => norm(c.name).includes(q));
+    const cur = curCid();
+    el.innerHTML = list.length ? list.map(c => `<button class="card row" style="${c.id === cur ? 'border-color:#7FA9FF;background:#F4F8FF' : ''}" data-act="openclass" data-id="${esc(c.id)}"><span class="tile-ic" style="--c:#fff;--bg-c:linear-gradient(135deg,#2F7BFF,#0A52D6);font-weight:800;font-size:14px">${esc(badge(c.name))}</span>
+      <span class="grow"><div class="t">${esc(c.name)}</div><div class="s">${studWord(c.students.length)}${c.teacher && c.teacher.name ? ' · ' + esc(c.teacher.name) : ''}</div><div class="s">${SCHOOL}</div></span><span class="chev">${ic('right', 16, 2.2)}</span></button>`).join('')
+      : `<div class="card">${q ? empty('Класс не найден', 'Попробуйте другой запрос') : isDirector() ? empty('Классов пока нет', 'Нажмите «Создать класс», чтобы добавить первый') : empty('Классов пока нет', 'Класс создаёт директор')}</div>`;
+  }
+};
+
+/* ── Страница класса ── */
+ROUTES.class = {
+  tab: 'classes',
+  shell: () => { if (!cls()) return `${header('Класс', { back: true })}<div class="card">${empty('Класс не выбран', 'Откройте класс в списке «Классы»')}</div>`;
+    return `${header(esc(cname()), { back: true })}<div id="clsHead"></div>
+    <div class="seg" style="margin-top:12px"><button class="pill ${S.ctab === 'students' ? 'on' : ''}" data-act="ctab" data-v="students">Ученики</button><button class="pill ${S.ctab === 'subjects' ? 'on' : ''}" data-act="ctab" data-v="subjects">Предметы</button></div>
+    <label class="search">${ic('search', 18)}<input data-in="stq" placeholder="Поиск…" id="stq"/></label><div id="clsBody" class="card" style="overflow:hidden"></div>`; },
+  fill() {
+    const c = cls(), hd = $('#clsHead'), el = $('#clsBody'); if (!el || !c) return;
+    if (hd) {
+      const t = c.teacher && c.teacher.name ? c.teacher : null, dir = isDirector();
+      hd.innerHTML = `<div class="card row" style="background:#EEF4FF"><span class="tile-ic" style="--c:#fff;--bg-c:var(--blue);font-weight:800">${esc(badge(c.name))}</span><span class="grow"><div class="t" style="font-size:15px">${esc(c.name)}</div><div class="s">${studWord(ST.length)}</div><div class="s">${SCHOOL}</div></span></div>
+      <div class="card row" style="margin-top:10px">${t ? avatar(t.name, 40) : `<span class="tile-ic sm" style="${cv(PAL[3])}">${ic('user', 19)}</span>`}<span class="grow"><div class="s">Классный руководитель</div><div class="t">${t ? esc(t.name) : 'Не назначен'}</div>${t && t.phone ? `<a href="tel:${esc(t.phone.replace(/\s/g, ''))}" style="color:var(--blue);font-size:12.5px;font-weight:700;text-decoration:none">${esc(t.phone)}</a>` : ''}</span>${dir ? `<button class="mini-x" data-act="teachedit" aria-label="Классный руководитель">${ic('pencil', 17)}</button>` : ''}</div>
+      ${dir ? `<div class="jbtns" style="margin-top:10px"><button class="btn sm" data-act="stuadd">${ic('plus', 16, 2.4)} Ученик</button><button class="btn sm ghost" data-act="clsedit">${ic('pencil', 16)} Название</button><button class="btn sm ghost" data-act="clsdel" style="color:var(--red)">${ic('trash', 16)} Удалить</button></div>` : ''}`;
+    }
+    $$('.seg .pill').forEach(b => b.classList.toggle('on', b.dataset.v === S.ctab));
+    const q = norm(($('#stq') || {}).value);
+    if (S.ctab === 'students') {
+      const list = ST.filter(n => !q || norm(n).includes(q));
+      el.innerHTML = list.length ? list.map(n => `<button class="row" style="border-bottom:1px solid var(--line)" data-act="stu" data-n="${esc(n)}">${avatar(n, 38)}<span class="grow"><div class="t" style="font-weight:600">${esc(n)}</div>${PHONE[n] ? `<div class="s">${esc(PHONE[n])}</div>` : ''}</span><span class="chev">${ic('right', 16, 2.2)}</span></button>`).join('')
+        : (ST.length ? empty('Никого не нашли') : empty('Учеников пока нет', isDirector() ? 'Нажмите «Ученик», чтобы добавить' : 'Учеников добавляет директор'));
+    } else {
+      const subs = D.j.subjects.filter(s => !q || norm(s).includes(q));
+      el.innerHTML = subs.length ? subs.map(s => { const a = classAvg(s), n = (D.j.journal[s].dates || []).length;
+        return `<button class="row" style="border-bottom:1px solid var(--line)" data-act="jsubgo" data-s="${esc(s)}"><span class="tile-ic sm" style="${cv(subjPal(s))}">${ic('book', 18)}</span><span class="grow"><div class="t">${esc(s)}</div><div class="s">Средний балл класса: ${a != null ? fmtN(a) : '—'} · уроков в журнале: ${n}</div></span><span class="chev">${ic('right', 16, 2.2)}</span></button>`; }).join('') : empty('Предметов пока нет', 'Учитель добавит их в журнале');
+    }
+  }
+};
+
+/* ── Журнал ── */
+ROUTES.journal = {
+  tab: 'journal',
+  shell: () => `${header('Журнал')}
+    <div class="sel2"><select class="inp" disabled aria-label="Класс"><option>${esc(cname())}</option></select>
+    <select class="inp" data-ch="jsort" aria-label="Сортировка"><option value="alpha" ${S.jsort === 'alpha' ? 'selected' : ''}>По алфавиту</option><option value="rating" ${S.jsort === 'rating' ? 'selected' : ''}>По рейтингу</option></select></div>
+    <div class="pills" id="jChips"></div><div class="card tbl-wrap" id="jTable"></div><div id="jTools"></div>`,
+  fill() {
+    const chips = $('#jChips'), tb = $('#jTable'), tools = $('#jTools'); if (!chips || !tb) return;
+    const subs = D.j.subjects;
+    if (S.jsub !== 'all' && !subs.includes(S.jsub)) S.jsub = 'all';
+    chips.innerHTML = `<button class="pill ${S.jsub === 'all' ? 'on' : ''}" data-act="jsub" data-s="all">Все</button>` + subs.map(s => `<button class="pill ${S.jsub === s ? 'on' : ''}" data-act="jsub" data-s="${esc(s)}">${esc(s)}</button>`).join('');
+    const mine = myStudent();
+    let names = ST.slice(); if (S.jsort === 'rating') names.sort((a, b) => (overall(b) || 0) - (overall(a) || 0));
+    if (!subs.length) { tb.innerHTML = empty('Журнал пока пуст', isTeacher() ? 'Добавьте первый предмет' : 'Оценки появятся, когда учитель добавит предметы'); }
+    else if (S.jsub === 'all') {
+      tb.innerHTML = `<table class="tbl"><thead><tr><th>Ученик</th>${subs.map(s => `<th class="sub-h" data-act="jsub" data-s="${esc(s)}">${esc(abbr(s))}</th>`).join('')}<th>Ср.</th></tr></thead><tbody>` +
+        names.map(n => `<tr class="${n === mine ? 'me' : ''}"><td data-act="stu" data-n="${esc(n)}">${esc(n)}</td>${subs.map(s => { const a = avg(s, n); return `<td>${a != null ? `<span class="gc ${gcls(a)}">${fmtN(a)}</span>` : '<span class="muted">–</span>'}</td>`; }).join('')}<td class="avgc">${overall(n) != null ? `<span class="gc ${gcls(overall(n))}">${fmtN(overall(n))}</span>` : '–'}</td></tr>`).join('') + `</tbody></table>`;
+    } else {
+      const j = D.j.journal[S.jsub], dates = j.dates || [];
+      if (!dates.length) tb.innerHTML = empty('Дат пока нет', isTeacher() ? 'Нажмите «Дата», чтобы добавить урок' : 'Учитель ещё не добавил уроки по этому предмету');
+      else tb.innerHTML = `<table class="tbl"><thead><tr><th>Ученик</th>${dates.map(d => { const x = parseYMD(d); return `<th>${pad(x.getDate())}.${pad(x.getMonth() + 1)}</th>`; }).join('')}<th>Ср.</th></tr></thead><tbody>` +
+        names.map(n => { const g = j.grades[n] || []; const a = avg(S.jsub, n);
+          return `<tr class="${n === mine ? 'me' : ''}"><td data-act="stu" data-n="${esc(n)}">${esc(n)}</td>${dates.map((d, i) => { const v = g[i], has = v != null && v !== '';
+            const inner = `<span class="gc ${has ? gcls(v) : ''}">${has ? esc(v) : (isTeacher() ? '+' : '')}</span>`;
+            return `<td>${isTeacher() ? `<button class="gcb ${has ? '' : 'emp'}" data-act="gcell" data-n="${esc(n)}" data-i="${i}">${inner}</button>` : inner}</td>`; }).join('')}<td class="avgc">${a != null ? `<span class="gc ${gcls(a)}">${fmtN(a)}</span>` : '–'}</td></tr>`; }).join('') + `</tbody></table>`;
+    }
+    tools.innerHTML = isTeacher() ? `<div class="jbtns">${S.jsub !== 'all' ? `<button class="btn sm" data-act="jdate">${ic('plus', 16, 2.4)} Дата</button>` : ''}<button class="btn sm ghost" data-act="jsubj">${ic('plus', 16, 2.4)} Предмет</button></div>` : '';
+  }
+};
+
+/* ── Домашние задания ── */
+function hwStatus(t) {
+  if (t.done) return 'done';
+  if (!t.due) return 'active';
+  const diff = Math.round((parseYMD(t.due) - startOfDay(new Date())) / 86400000);
+  return diff < 0 ? 'overdue' : diff <= 1 ? 'soon' : 'active';
+}
+ROUTES.hw = {
+  tab: 'hw',
+  shell: () => `${header('Домашние задания')}
+    <div class="pills"><button class="pill" data-act="hwf" data-v="all">Все</button><button class="pill" data-act="hwf" data-v="active">Активные</button><button class="pill" data-act="hwf" data-v="done">Выполненные</button></div>
+    <div id="hwList" class="list hw"></div>
+    <div class="bottom-cta"><button class="btn" data-act="hwadd">${ic('plus', 18, 2.4)} Добавить ДЗ</button></div>`,
+  fill() {
+    const el = $('#hwList'); if (!el) return;
+    $$('.pills .pill').forEach(b => b.classList.toggle('on', b.dataset.v === S.hwf));
+    let list = D.hw.slice().filter(t => S.hwf === 'all' || (S.hwf === 'done' ? t.done : !t.done));
+    list.sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || ((a.due || '9999') < (b.due || '9999') ? -1 : 1));
+    el.innerHTML = list.length ? list.map(t => {
+      const st = hwStatus(t), late = st === 'overdue' || st === 'soon', p = subjPal(t.subject);
+      return `<div class="card row"><span class="tile-ic sm" style="${cv(p)}">${ic('check', 19)}</span><div class="grow">
+        <div style="display:flex;justify-content:space-between;gap:6px"><div class="t">${esc(t.subject)}</div>${isTeacher() ? `<button class="mini-x" data-act="hwdel" data-id="${esc(t.id)}" aria-label="Удалить">${ic('trash', 17)}</button>` : ''}</div>
+        <div class="s" style="font-size:12px;color:#51617F">${esc(t.title)}</div>
+        <div class="foot"><span class="due ${late && !t.done ? 'late' : 'ok'}" style="margin:0">${t.due ? 'До ' + fmtLong(parseYMD(t.due)) : 'Без срока'}${st === 'overdue' ? ' · просрочено' : ''}</span>
+        <button class="chip ${t.done ? 'yes' : 'no'}" data-act="hwtoggle" data-id="${esc(t.id)}" aria-label="Сменить статус"><i></i>${t.done ? 'Выполнено' : 'Не выполнено'}</button></div></div></div>`;
+    }).join('') : `<div class="card">${empty('Заданий нет', S.hwf === 'done' ? 'Выполненных заданий пока нет' : 'Когда учитель добавит ДЗ, оно появится здесь')}</div>`;
+  }
+};
+
+/* ── Расписание ── */
+ROUTES.schedule = {
+  tab: null,
+  shell: () => { if (!S.day) { const w = new Date().getDay(); S.day = w === 0 ? 1 : w; }
+    return `${header('Расписание', { back: true })}<div class="days">${[1, 2, 3, 4, 5, 6].map(d => `<button class="day" data-act="day" data-d="${d}">${WD_SHORT[d]}</button>`).join('')}</div><div id="sList" class="list"></div><div id="sTools"></div>`; },
+  fill() {
+    const el = $('#sList'); if (!el) return;
+    $$('.day').forEach(b => b.classList.toggle('on', +b.dataset.d === S.day));
+    const date = dateOfDow(S.day), ls = lessonsFor(date), now = new Date(), isToday = ymd(now) === ymd(date), mins = now.getHours() * 60 + now.getMinutes();
+    const cols = [PAL[0], PAL[1], PAL[2], PAL[0], PAL[2], PAL[1], PAL[3]];
+    el.innerHTML = `<p class="muted" style="margin:-4px 2px 2px;font-size:12px">${WD[S.day]}, ${fmtLong(date)}</p>` + ls.map(l => {
+      const cur = isToday && l.time && l.status !== 'cancel' && mins >= timeRange(l.time)[0] && mins <= timeRange(l.time)[1];
+      return `<div class="card row lesson ${l.status === 'cancel' ? 'cancel' : ''} ${cur ? 'now' : ''}"><span class="num" style="${cv(cols[(l.n - 1) % cols.length])}">${l.n}</span>
+        <span class="grow"><div class="time">${l.time ? fmtTime(l.time) : ''}</div><div class="t">${esc(l.name)}</div>
+        <div class="s ${l.status === 'cancel' ? 'red' : l.status === 'changed' ? 'blue' : ''}">${esc(l.note || 'Урок ' + l.n + ' из ' + ls.length)}</div></span>
+        ${cur ? '<span class="chip blue">Сейчас</span>' : ''}</div>`; }).join('');
+    if (!ls.length) el.innerHTML += `<div class="card">${empty('Уроков нет', isTeacher() ? 'Нажмите «Расписание», чтобы добавить уроки' : 'Расписание ещё не добавлено')}</div>`;
+    const tools = $('#sTools'); if (tools) tools.innerHTML = isTeacher() ? `<div class="bottom-cta" style="display:flex;gap:8px"><button class="btn" data-act="schchange">${ic('pencil', 18)} Замена</button><button class="btn ghost" data-act="schedit">${ic('cal', 18)} Расписание</button></div>` : '';
+  }
+};
+
+/* ── Объявления ── */
+ROUTES.news = {
+  tab: 'more',
+  shell: () => { LS.set('ann_seen', Date.now()); return `${header('Объявления', { back: true })}<div id="annList" class="list"></div><div id="annTools"></div>`; },
+  fill() {
+    const el = $('#annList'); if (!el) return;
+    el.innerHTML = D.ann.length ? D.ann.map(a => `<div class="card row" style="align-items:flex-start"><span class="tile-ic" style="${cv(PAL[hash(a.icon || a.title) % 3 === 0 ? 2 : hash(a.title) % 3 === 1 ? 0 : 4])};font-size:22px">${esc(a.icon || '📢')}</span>
+      <span class="grow"><div class="t" style="font-size:14px">${esc(a.title)}</div><div class="s">${fmtLong(new Date(a.ts))}</div><div class="s" style="color:#51617F;font-size:12px;margin-top:5px;white-space:pre-wrap">${esc(a.text)}</div></span>
+      ${isTeacher() ? `<button class="mini-x" data-act="anndel" data-id="${esc(a.id)}" aria-label="Удалить">${ic('trash', 17)}</button>` : ''}</div>`).join('') : `<div class="card">${empty('Объявлений нет', 'Новые объявления появятся здесь')}</div>`;
+    const t = $('#annTools'); if (t) t.innerHTML = isTeacher() ? `<div class="bottom-cta"><button class="btn" data-act="annadd">${ic('plus', 18, 2.4)} Новое объявление</button></div>` : '';
+  }
+};
+
+/* ── Уведомления ── */
+ROUTES.notifs = {
+  tab: null,
+  shell: () => { LS.set('notif_seen', Date.now()); return `<header class="top top-back"><button class="ib" data-act="back" aria-label="Назад">${ic('left', 22, 2.2)}</button><h1>Уведомления</h1><div class="top-r"><button class="ib blue" data-act="notifSettings" aria-label="Настройки">${ic('gear', 22)}</button></div></header>
+    <div class="pills">${[['all','Все'],['hw','ДЗ'],['grades','Оценки'],['sched','Расписание'],['ann','Объявления'],['chat','Чат']].map(c => `<button class="pill" data-act="nf" data-v="${c[0]}">${c[1]}</button>`).join('')}</div><div id="nList" class="list"></div>`; },
+  fill() {
+    const el = $('#nList'); if (!el) return;
+    $$('.pills .pill').forEach(b => b.classList.toggle('on', b.dataset.v === S.nf));
+    const f = buildFeed().filter(x => S.nf === 'all' || x.cat === S.nf);
+    el.innerHTML = f.length ? f.map(x => `<button class="card row" data-act="${x.go === 'hw' || x.go === 'journal' ? 'tab' : 'go'}" data-r="${x.go}"><span class="tile-ic sm" style="${cv(x.p)};border-radius:50%">${ic(x.ico, 19)}</span>
+      <span class="grow"><div class="t">${esc(x.title)}</div><div class="s" style="color:#51617F">${esc(x.sub)}</div><div class="s">${tl(x.ts)}</div></span><span class="chev">${ic('right', 16, 2.2)}</span></button>`).join('') : `<div class="card">${empty('Уведомлений нет', 'Новые события класса появятся здесь')}</div>`;
+  }
+};
+
+/* ── Профиль ── */
+ROUTES.profile = {
+  tab: 'more',
+  shell: () => { const n = me(), t = isTeacher();
+    return `${header('Профиль', { back: true })}<div class="prof-head">${avatar(n || '?', 60)}<div><div class="t">${esc(n || 'Гость')}</div><div class="s">${roleName()} · ${esc(cname())}</div></div></div>
+    <div class="card menu">
+      <button class="row" data-act="personal"><span class="mic">${ic('user', 21)}</span><span class="grow t">Личные данные</span><span class="chev">${ic('right', 16, 2.2)}</span></button>
+      <button class="row" data-act="notifSettings"><span class="mic">${ic('bell', 21)}</span><span class="grow t">Настройки уведомлений</span><span class="chev">${ic('right', 16, 2.2)}</span></button>
+      ${profRows()}
+      <button class="row" data-act="help"><span class="mic">${ic('help', 21)}</span><span class="grow t">Помощь</span><span class="chev">${ic('right', 16, 2.2)}</span></button>
+      <button class="row" data-act="logout"><span class="mic">${ic('logout', 21)}</span><span class="grow t">Выйти</span><span class="chev">${ic('right', 16, 2.2)}</span></button></div>`; }
+};
+
+/* ── Ещё ── */
+ROUTES.more = {
+  tab: 'more',
+  shell: () => `${header('Ещё')}<div class="card menu" id="moreMenu"></div>`,
+  fill() {
+    const el = $('#moreMenu'); if (!el) return;
+    const annN = D.ann.filter(a => (a.ts || 0) > +LS.get('ann_seen', 0)).length;
+    const items = [['news','mega','Объявления',PAL[2],annN],['chat','msg','Чат класса',PAL[0],0],['pay','wallet','Оплата обучения',PAL[1],0],['att','clip','Посещаемость',PAL[4],0],['notifs','bell','Уведомления',PAL[3],0],['profile','user','Профиль',PAL[0],0],['motiv','star','Мотивация',PAL[2],0]];
+    el.innerHTML = items.map(i => `<button class="row" data-act="go" data-r="${i[0]}"><span class="tile-ic sm" style="${cv(i[3])}">${ic(i[1], 19)}</span><span class="grow t">${i[2]}</span>${i[4] ? `<span class="badge-n">${i[4]}</span>` : ''}<span class="chev">${ic('right', 16, 2.2)}</span></button>`).join('');
+  }
+};
+
+/* ── Чат: список ── */
+const chatMsgs = () => Object.values(D.chat).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+ROUTES.chat = {
+  tab: 'more',
+  shell: () => `${header('Чат', { right: `<button class="ib blue" data-act="go" data-r="chatroom" aria-label="Новое сообщение">${ic('plus', 22, 2.2)}</button>` })}
+    <label class="search">${ic('search', 18)}<input placeholder="Поиск…" data-in="chq"/></label><div id="thr" class="card"></div>`,
+  fill() {
+    const el = $('#thr'); if (!el) return;
+    const q = norm(($('.search input') || {}).value), ms = chatMsgs().filter(m => m.type !== 'system'), last = ms[ms.length - 1];
+    const seen = +LS.get('chat_seen', 0), un = ms.filter(m => (m.ts || 0) > seen && m.sender !== me()).length;
+    if (q && !(norm(cname()) + ' общий чат класса').includes(q)) { el.innerHTML = empty('Ничего не найдено'); return; }
+    const when = last ? (startOfDay(new Date(last.ts)).getTime() === startOfDay(new Date()).getTime() ? pad(new Date(last.ts).getHours()) + ':' + pad(new Date(last.ts).getMinutes()) : fmtShort(new Date(last.ts))) : '';
+    el.innerHTML = `<button class="row thread" data-act="go" data-r="chatroom"><span class="tile-ic" style="--c:#fff;--bg-c:linear-gradient(135deg,#2F7BFF,#0A52D6);border-radius:50%">${ic('users', 22)}</span>
+      <span class="grow"><div class="t">${esc(cname())} <span class="muted" style="font-weight:600;font-size:11px">(общий чат)</span></div><div class="s" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last ? esc(last.sender + ': ' + last.text) : 'Сообщений пока нет'}</div></span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end"><span class="when">${when}</span>${un ? `<span class="unread">${un}</span>` : ''}</span></button>`;
+  }
+};
+
+/* ── Чат: переписка ── */
+const REACTIONS = ['👍','❤️','😂','😮','😢','🙏'];
+ROUTES.chatroom = {
+  bar: false, cls: 'chat',
+  shell: () => { S.chatStick = true; return `<div class="chat-top"><button class="ib" data-act="back" aria-label="Назад">${ic('left', 22, 2.2)}</button>
+    <span class="tile-ic sm" style="--c:#fff;--bg-c:linear-gradient(135deg,#2F7BFF,#0A52D6);border-radius:50%">${ic('users', 19)}</span><div><div class="t">${esc(cname())} (общий чат)</div><div class="s">${SCHOOL}</div></div></div>
+    <div class="msgs" id="msgs"></div><div id="replyBar"></div>
+    <div class="composer"><textarea id="chatIn" rows="1" placeholder="Сообщение" data-in="chatin"></textarea><button class="send" data-act="chatsend" aria-label="Отправить">${ic('send', 20, 2)}</button></div>`; },
+  fill() {
+    const el = $('#msgs'); if (!el) return;
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 90;
+    const ms = chatMsgs(); let lastDay = '', html = '';
+    if (!ms.length) html = '<div class="msys" style="margin:auto">Сообщений пока нет. Напишите первым!</div>';
+    ms.forEach(m => {
+      const d = new Date(m.ts || 0), day = startOfDay(d).getTime();
+      if (day !== lastDay) { lastDay = day; html += `<div class="mday">${startOfDay(new Date()).getTime() === day ? 'Сегодня' : fmtLong(d)}</div>`; }
+      if (m.type === 'system') { html += `<div class="msys">${esc(m.text)}</div>`; return; }
+      const own = m.sender === me(), rx = m.reactions ? Object.keys(m.reactions).filter(e => m.reactions[e] > 0).map(e => `<span class="rx">${esc(e)} ${m.reactions[e]}</span>`).join('') : '';
+      html += `<div class="m ${own ? 'own' : ''}" data-act="msg" data-k="${esc(m._k)}">${!own ? `<div class="ms" style="color:${pal(m.sender)[0]}">${esc(m.sender)}</div>` : ''}
+        ${m.replyText ? `<div class="mr"><b>${esc(m.replySender)}</b> ${esc(String(m.replyText).slice(0, 80))}</div>` : ''}<div class="mt">${esc(m.text)}</div>
+        <div class="mm">${rx}<span>${pad(d.getHours())}:${pad(d.getMinutes())}</span></div></div>`;
+    });
+    el.innerHTML = html;
+    if (S.chatStick || near) { el.scrollTop = el.scrollHeight; S.chatStick = false; }
+    const last = ms[ms.length - 1]; if (last) LS.set('chat_seen', last.ts || Date.now());
+    const rb = $('#replyBar');
+    if (rb) rb.innerHTML = S.reply ? `<div class="reply-bar">${ic('reply', 16)}<span><b>${esc(S.reply.sender)}</b>: ${esc(S.reply.text)}</span><button class="mini-x" data-act="replyx" aria-label="Отменить ответ">${ic('x', 18)}</button></div>` : '';
+  }
+};
+
+/* ── Оплата ── */
+ROUTES.pay = {
+  tab: 'more',
+  shell: () => `${header('Оплата обучения', { back: true })}<div id="payTop"></div><div id="payList" class="card" style="overflow:hidden;margin-top:12px"></div>`,
+  fill() {
+    const top = $('#payTop'), el = $('#payList'); if (!top || !el) return;
+    const sum = ST.reduce((a, n) => a + Math.min(paidOf(n), TOTAL_PAY), 0), full = ST.filter(n => paidOf(n) >= TOTAL_PAY).length, pct = Math.round(sum / (ST.length * TOTAL_PAY) * 100);
+    top.innerHTML = `<div class="card" style="padding:16px"><div class="s muted" style="font-size:12px;font-weight:600">Собрано</div><div class="big">${sum.toLocaleString('ru-RU')} <span class="muted" style="font-size:14px;font-weight:700">из ${(ST.length * TOTAL_PAY).toLocaleString('ru-RU')} с.</span></div>
+      <div class="bar" style="margin:10px 0 8px"><i style="width:${pct}%"></i></div><div class="muted" style="font-size:12px">Оплатили полностью: ${full} из ${ST.length} · по ${TOTAL_PAY.toLocaleString('ru-RU')} с. с ученика</div></div>`;
+    el.innerHTML = ST.map(n => { const p = paidOf(n), st = p >= TOTAL_PAY ? ['yes','Оплачено', PAL[1][0]] : p > 0 ? ['warn','Частично', PAL[2][0]] : ['no','Не оплачено', PAL[4][0]];
+      return `<button class="row" style="border-bottom:1px solid var(--line)" ${isTeacher() ? `data-act="payedit" data-n="${esc(n)}"` : 'tabindex="-1"'}>${avatar(n, 36)}<span class="grow"><div class="t" style="font-weight:600">${esc(n)}</div><div class="bar" style="--c:${st[2]};margin-top:6px"><i style="width:${Math.min(100, Math.round(p / TOTAL_PAY * 100))}%"></i></div></span>
+      <span style="text-align:right"><div style="font-weight:800;font-size:12.5px">${p.toLocaleString('ru-RU')} с.</div><span class="chip ${st[0]}" style="margin-top:3px">${st[1]}</span></span></button>`; }).join('');
+  }
+};
+
+/* ── Посещаемость ── */
+const attSt = n => n === 0 ? ['yes','Хорошо'] : n === 1 ? ['warn','Начало'] : n <= 3 ? ['warn','Внимание'] : ['no','Критично'];
+ROUTES.att = {
+  tab: 'more',
+  shell: () => `${header('Посещаемость', { back: true })}<div id="attTop"></div><div id="attList" class="card" style="overflow:hidden;margin-top:12px"></div>`,
+  fill() {
+    const top = $('#attTop'), el = $('#attList'); if (!top || !el) return;
+    const clean = ST.filter(n => absOf(n) === 0).length, crit = ST.filter(n => absOf(n) >= 4).length, total = ST.reduce((a, n) => a + absOf(n), 0);
+    top.innerHTML = `<div class="stats"><div class="card stat"><b>${clean}</b><small>Без прогулов</small></div><div class="card stat"><b>${crit}</b><small>Критично</small></div><div class="card stat"><b>${total}</b><small>Всего прогулов</small></div></div>`;
+    el.innerHTML = ST.map(n => { const a = absOf(n), s = attSt(a);
+      return `<div class="row" style="border-bottom:1px solid var(--line)">${avatar(n, 36)}<span class="grow"><div class="t" style="font-weight:600">${esc(n)}</div><span class="chip ${s[0]}" style="margin-top:4px">${s[1]}</span></span>
+      ${isTeacher() ? `<span class="stepper"><button data-act="attm" data-n="${esc(n)}" aria-label="Минус">−</button><b>${a}</b><button data-act="attp" data-n="${esc(n)}" aria-label="Плюс">+</button></span>` : `<b style="font-size:16px">${a}</b>`}</div>`; }).join('');
+  }
+};
+
+/* ── Мотивация ── */
+ROUTES.motiv = {
+  bar: false, cls: 'bare',
+  shell: () => `<div class="motiv"><button class="ib xb" data-act="back" aria-label="Закрыть">${ic('x', 22, 2.2)}</button>
+    <svg width="230" height="250" viewBox="0 0 240 260" aria-hidden="true">
+      <path d="M40 40l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#B9D2FF"/><path d="M196 96l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#B9D2FF"/><path d="M30 120l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#CFE0FF"/>
+      <path d="M170 24l40 14-14 6-4 14-8-12-16-2z" fill="none" stroke="#7FA9F5" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="78" y="112" width="92" height="112" rx="26" fill="#2A5BD7"/>
+      <path d="M62 236c0-44 26-80 58-80s58 36 58 80z" fill="#2F6BFF"/><path d="M104 156c4 12 28 12 32 0" fill="none" stroke="#1E4FD0" stroke-width="3"/>
+      <rect x="112" y="136" width="16" height="16" fill="#FFD3B0"/>
+      <circle cx="120" cy="96" r="34" fill="#FFD3B0"/><path d="M85 92c-2-28 18-42 38-40 20 1 34 16 30 40-8-12-22-16-34-15-14 1-26 5-34 15z" fill="#1B2A4A"/>
+      <circle cx="108" cy="100" r="3" fill="#1B2A4A"/><circle cx="133" cy="100" r="3" fill="#1B2A4A"/><path d="M112 112c5 6 13 6 18 0" fill="none" stroke="#C8714A" stroke-width="2.5" stroke-linecap="round"/>
+      <g transform="rotate(-10 150 188)"><rect x="124" y="160" width="50" height="62" rx="5" fill="#1FB26F"/><rect x="130" y="166" width="38" height="50" rx="3" fill="#E3F7EE"/><path d="M136 178h26M136 188h26M136 198h18" stroke="#1FB26F" stroke-width="3" stroke-linecap="round"/></g>
+      <circle cx="132" cy="212" r="9" fill="#FFD3B0"/></svg>
+    <h2>Вперёд к новым<br>вершинам!</h2><p>У тебя всё получится!</p><button class="btn" data-act="tab" data-r="home">На главную</button></div>`
+};
+
+/* ═══════════════ ДЕЙСТВИЯ ═══════════════ */
+const ACT = {
+  back, go: d => go(d.r), tab: d => go(d.r, {}, { tab: true }),
+  sheetbg: (d, t, e) => { if (e.target === t) closeSheet(); },
+  sheetclose: () => closeSheet(),
+  /* вход */
+  loginSheet() {
+    const has = classList().length > 0;
+    sheet('Вход', (has ? `<p class="ssub" style="margin-top:-6px">Выберите свой класс и своё имя.</p>
+      <label class="field"><span>Класс</span><select class="inp" id="lcls" data-ch="lcls">${classOptions('')}</select></label>
+      <label class="field"><span>Ученик</span><select class="inp" id="lname"><option value="">Сначала выберите класс</option></select></label><p class="err" id="lerr">Выберите класс и имя из списка</p>
+      <button class="btn" data-act="loginGo">Войти</button>`
+      : `<p class="ssub" id="lempty" style="margin-top:-6px">${D.classesLoaded ? 'Классов пока нет. Их создаёт директор.' : 'Загрузка списка классов…'}</p>`)
+      + `<button class="btn ghost" style="margin-top:10px" data-act="tlogin">Я учитель</button><button class="btn ghost" style="margin-top:10px" data-act="dlogin">Я директор</button>`);
+  },
+  loginGo() { const c = ($('#lcls') || {}).value, v = ($('#lname') || {}).value; if (!c || !v) { $('#lerr').style.display = 'block'; return; } setClass(c); doLogin(v); },
+  createSheet() {
+    if (!classList().length) { sheet('Новый аккаунт', `<p class="ssub" style="margin-top:-6px">Классов пока нет. Их создаёт директор.</p>`); return; }
+    sheet('Новый аккаунт', `<p class="ssub" style="margin-top:-6px">Для тех, кого нет в списке класса. Имя сохранится на этом устройстве.</p>
+      <label class="field"><span>Класс</span><select class="inp" id="ccls">${classOptions('')}</select></label>
+      <label class="field"><span>Фамилия и имя</span><input class="inp" id="cname" maxlength="40" placeholder="Например, Иванов Иван" autocomplete="name"/></label><p class="err" id="cerr">Выберите класс и введите имя (минимум 2 буквы)</p>
+      <button class="btn" data-act="createGo">Создать аккаунт</button>`);
+  },
+  createGo() { const c = ($('#ccls') || {}).value, v = $('#cname').value.trim(); if (!c || v.length < 2) { $('#cerr').style.display = 'block'; return; } setClass(c); doLogin(v); },
+  tlogin() {
+    const wc = !curCid(), pre = ($('#lcls') || {}).value || '';
+    askTeacher(() => { if (!me()) LS.set('chat_name', (cls() && cls().teacher && cls().teacher.name) || 'Учитель'); closeSheet(); if (S.route === 'welcome') go('home', {}, { tab: true }); else render(); toast('Режим учителя включён'); }, wc, pre);
+  },
+  tsubmit() {
+    const v = ($('#tpass') || {}).value, sel = $('#tcls');
+    if (sel && !sel.value) { const e = $('#tcerr'); if (e) e.style.display = 'block'; return; }
+    if (v === PASS) { if (sel) setClass(sel.value); SS.set('teacher', '1'); const cb = window.__tcb; window.__tcb = null; closeSheet(); if (cb) cb(); }
+    else { const e = $('#terr'); if (e) e.style.display = 'block'; const i = $('#tpass'); if (i) { i.value = ''; i.focus(); } }
+  },
+  tout() { SS.del('teacher'); render(); toast('Режим учителя выключен'); },
+  dlogin() { askDirector(() => { closeSheet(); go('classes', {}, { tab: true }); toast('Вы вошли как директор'); }); },
+  dsubmit() {
+    const v = ($('#dpass') || {}).value;
+    if (v === DIRECTOR_PASS) { SS.set('director', '1'); if (!me()) LS.set('chat_name', 'Директор'); const cb = window.__dcb; window.__dcb = null; closeSheet(); if (cb) cb(); }
+    else { const e = $('#derr'); if (e) e.style.display = 'block'; const i = $('#dpass'); if (i) { i.value = ''; i.focus(); } }
+  },
+  dout() { SS.del('director'); if (!curCid()) { LS.del('chat_name'); LS.del('login_user'); go('welcome', {}, { tab: true }); } else render(); toast('Режим директора выключен'); },
+  logout() { LS.del('chat_name'); LS.del('login_user'); LS.del('cid'); SS.del('teacher'); SS.del('director'); listenClass(''); go('welcome', {}, { tab: true }); },
+  /* ── директор: классы, руководитель, ученики ── */
+  openclass(d) { setClass(d.id); go('class'); },
+  clsadd() { needDirector(() => sheet('Новый класс', `<label class="field"><span>Название класса</span><input class="inp" id="cn1" maxlength="20" placeholder="Например, 10 «А»"/></label><p class="err" id="cnerr"></p><button class="btn" data-act="clsaddGo">Создать класс</button>`)); },
+  clsaddGo() {
+    needDirector(() => {
+      if (!needDB(true)) return; const v = $('#cn1').value.trim().replace(/\s+/g, ' '), e = $('#cnerr');
+      if (!v) { e.textContent = 'Введите название'; e.style.display = 'block'; return; }
+      if (classList().some(c => norm(c.name) === norm(v))) { e.textContent = 'Такой класс уже есть'; e.style.display = 'block'; return; }
+      const ref = DB.ref('classes').push(), id = ref.key;
+      ref.set({ name: v, ts: Date.now() }).catch(() => toast('Не удалось сохранить'));
+      setClass(id); closeSheet(); go('class'); toast('Класс создан — добавьте руководителя и учеников');
+    });
+  },
+  clsedit() { needDirector(() => { const c = cls(); if (!c) return; sheet('Название класса', `<label class="field"><span>Название</span><input class="inp" id="cn1" maxlength="20" value="${esc(c.name)}"/></label><p class="err" id="cnerr"></p><button class="btn" data-act="clseditGo">Сохранить</button>`); }); },
+  clseditGo() {
+    needDirector(() => {
+      if (!needDB()) return; const v = $('#cn1').value.trim().replace(/\s+/g, ' '), e = $('#cnerr');
+      if (!v) { e.textContent = 'Введите название'; e.style.display = 'block'; return; }
+      if (classList().some(c => norm(c.name) === norm(v) && c.id !== curCid())) { e.textContent = 'Такой класс уже есть'; e.style.display = 'block'; return; }
+      DB.ref('classes/' + curCid() + '/name').set(v).catch(() => toast('Не удалось сохранить')); closeSheet(); render(); toast('Сохранено');
+    });
+  },
+  clsdel() { needDirector(() => { const c = cls(); if (!c) return; sheet('Удалить класс?', `<p class="ssub" style="margin-top:-6px">«${esc(c.name)}» будет удалён вместе с учениками, журналом, ДЗ, объявлениями и чатом. Это нельзя отменить.</p><button class="btn" style="background:var(--red)" data-act="clsdelGo">Удалить класс</button><button class="btn ghost" style="margin-top:10px" data-act="sheetclose">Отмена</button>`); }); },
+  clsdelGo() {
+    needDirector(() => {
+      if (!needDB()) return; const id = curCid();
+      Promise.all([DB.ref('classes/' + id).remove(), DB.ref('cdata/' + id).remove()]).then(() => toast('Класс удалён')).catch(() => toast('Не удалось удалить'));
+      closeSheet(); go('classes', {}, { tab: true });
+    });
+  },
+  teachedit() {
+    needDirector(() => { const c = cls(); if (!c) return; const t = c.teacher || {};
+      sheet('Классный руководитель', `<p class="ssub" style="margin-top:-6px">${esc(c.name)}</p>${fld('tl', 'Фамилия', t.last, 'Иванова')}${fld('tf', 'Имя', t.first, 'Мария')}${fld('tm', 'Отчество', t.middle, 'Петровна')}${fldPhone(t.phone)}
+        <p class="err" id="terr2"></p><button class="btn" data-act="teachsave">Сохранить</button>${t.name ? `<button class="btn ghost" style="margin-top:10px;color:var(--red)" data-act="teachclear">Убрать руководителя</button>` : ''}`); });
+  },
+  teachsave() {
+    needDirector(() => {
+      if (!needDB()) return; const last = $('#tl').value.trim(), first = $('#tf').value.trim(), middle = $('#tm').value.trim(), phone = $('#phn').value.trim(), e = $('#terr2');
+      const err = m => { e.textContent = m; e.style.display = 'block'; };
+      if (!last || !first) return err('Укажите фамилию и имя');
+      if (badPhone(phone)) return err('Проверьте номер телефона');
+      DB.ref('classes/' + curCid() + '/teacher').set({ last, first, middle, phone, name: fullName(last, first, middle) }).catch(() => toast('Не удалось сохранить'));
+      closeSheet(); toast('Руководитель сохранён');
+    });
+  },
+  teachclear() { needDirector(() => { if (!needDB()) return; DB.ref('classes/' + curCid() + '/teacher').remove(); closeSheet(); toast('Руководитель убран'); }); },
+  stuadd() { needDirector(() => studentSheet()); },
+  stuedit(d) { needDirector(() => { const r = cls() && cls().students.find(s => s.id === d.id); if (r) studentSheet(r); }); },
+  stusave(d) {
+    needDirector(() => {
+      if (!needDB() || !cls()) return; const cid = curCid(), e = $('#sterr'), err = m => { e.textContent = m; e.style.display = 'block'; };
+      const last = $('#sl').value.trim(), first = $('#sf').value.trim(), middle = $('#sm').value.trim(), phone = $('#phn').value.trim();
+      if (!last || !first) return err('Укажите фамилию и имя');
+      if ([last, first, middle].some(badKey)) return err('Уберите символы . # $ [ ] /');
+      if (badPhone(phone)) return err('Проверьте номер телефона');
+      const name = fullName(last, first, middle), list = cls().students;
+      if (list.some(s => norm(s.name) === norm(name) && s.id !== d.id)) return err('Такой ученик уже есть в классе');
+      const rec = { last, first, middle, phone, name };
+      if (d.id) {
+        const old = list.find(s => s.id === d.id), up = old && old.name !== name ? moveStudent(old.name, name) : {};
+        up['classes/' + cid + '/students/' + d.id] = rec;
+        DB.ref().update(up).catch(() => toast('Не удалось сохранить')); closeSheet(); toast('Сохранено');
+      } else {
+        DB.ref('classes/' + cid + '/students').push().set(rec).catch(() => toast('Не удалось сохранить'));
+        toast('Добавлен: ' + name); studentSheet();
+      }
+    });
+  },
+  studel(d) { needDirector(() => { const r = cls() && cls().students.find(s => s.id === d.id); if (!r) return; sheet('Удалить ученика?', `<p class="ssub" style="margin-top:-6px">${esc(r.name)} будет удалён из класса вместе с оценками, прогулами и данными об оплате.</p><button class="btn" style="background:var(--red)" data-act="studelGo" data-id="${esc(r.id)}">Удалить</button><button class="btn ghost" style="margin-top:10px" data-act="sheetclose">Отмена</button>`); }); },
+  studelGo(d) {
+    needDirector(() => {
+      if (!needDB() || !cls()) return; const r = cls().students.find(s => s.id === d.id); if (!r) return;
+      const up = moveStudent(r.name, null); up['classes/' + curCid() + '/students/' + d.id] = null;
+      DB.ref().update(up).catch(() => toast('Не удалось удалить')); closeSheet(); toast('Ученик удалён');
+    });
+  },
+  /* расписание класса */
+  schedit() { needTeacher(() => schSheet(S.day || 1)); },
+  schdaysave() {
+    needTeacher(() => {
+      if (!needDB()) return; const day = +$('#sd').value, lines = $('#sl2').value.split('\n').map(x => x.trim()).filter(Boolean).slice(0, 7);
+      R('schedule/d' + day).set(lines.length ? lines : null).catch(() => toast('Не удалось сохранить'));
+      closeSheet(); toast('Расписание сохранено');
+    });
+  },
+  help() { sheet('Помощь', `<div class="kv"><span>Установка</span><b>Меню браузера → «На главный экран»</b></div><div class="kv"><span>Уведомления</span><b>Профиль → Настройки уведомлений</b></div><div class="kv"><span>Оценки, ДЗ, объявления</span><b>Добавляет учитель после входа по паролю</b></div><div class="kv"><span>Классы и ученики</span><b>Добавляет директор после входа по паролю</b></div><div class="kv"><span>Статус ДЗ</span><b>Нажмите на «Выполнено» / «Не выполнено»</b></div>`); },
+  personal() {
+    const n = me(), s = myStudent();
+    sheet('Личные данные', `<div class="kv"><span>Имя</span><b>${esc(n)}</b></div><div class="kv"><span>Роль</span><b>${roleName()}</b></div><div class="kv"><span>Класс</span><b>${cls() ? esc(cname()) + ', ' + SCHOOL : '—'}</b></div>${s ? `<div class="kv"><span>Телефон</span><b>${esc(PHONE[s])}</b></div><div class="kv"><span>Прогулы</span><b>${absOf(s)}</b></div><div class="kv"><span>Оплата</span><b>${paidOf(s).toLocaleString('ru-RU')} из ${TOTAL_PAY.toLocaleString('ru-RU')} с.</b></div>` : ''}`);
+  },
+  /* ученик */
+  stu(d) {
+    const n = d.n, a = overall(n), r = rankOf(n);
+    sheet('', `<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">${avatar(n, 54)}<div><div style="font-weight:800;font-size:16px">${esc(n)}</div><a href="tel:${esc((PHONE[n] || '').replace(/\s/g, ''))}" style="color:var(--blue);font-size:12.5px;font-weight:700;text-decoration:none">${esc(PHONE[n] || '')}</a></div></div>
+      <div class="stats"><div class="card stat"><b>${a != null ? fmtN(a) : '—'}</b><small>Средний балл</small></div><div class="card stat"><b>${r ? r.pos + ' из ' + r.total : '—'}</b><small>Место</small></div><div class="card stat"><b>${absOf(n)}</b><small>Прогулы</small></div></div>
+      <div class="sec" style="margin-top:16px"><h3>Оплата</h3><span class="chip ${paidOf(n) >= TOTAL_PAY ? 'yes' : paidOf(n) > 0 ? 'warn' : 'no'}">${paidOf(n).toLocaleString('ru-RU')} из ${TOTAL_PAY.toLocaleString('ru-RU')} с.</span></div>
+      <div class="sec" style="margin-top:14px"><h3>Предметы</h3></div>${D.j.subjects.length ? D.j.subjects.map(s => { const x = avg(s, n); return `<div class="kv"><span>${esc(s)}</span><b class="${gcls(x)}">${x != null ? fmtN(x) : '—'}</b></div>`; }).join('') : '<p class="muted">Оценок пока нет</p>'}${stuAdmin(n)}`);
+  },
+  ctab(d) { S.ctab = d.v; ROUTES.class.fill(); },
+  jsubgo(d) { S.jsub = d.s; go('journal', {}, { tab: true }); },
+  /* журнал */
+  jsub(d) { S.jsub = d.s; ROUTES.journal.fill(); },
+  gcell(d) {
+    S.edit = { s: S.jsub, n: d.n, i: +d.i }; const dt = parseYMD(D.j.journal[S.jsub].dates[+d.i]), cur = D.j.journal[S.jsub].grades[d.n][+d.i];
+    sheet(esc(d.n), `<p class="ssub" style="margin-top:-6px">${esc(S.jsub)} · ${fmtLong(dt)}</p><div class="gridn">${[1,2,3,4,5,6,7,8,9,10].map(v => `<button class="${+cur === v ? 'on' : ''}" data-act="setgrade" data-v="${v}">${v}</button>`).join('')}</div><button class="btn ghost" data-act="setgrade" data-v="">Очистить оценку</button>`);
+  },
+  setgrade(d) {
+    if (!needDB()) return; const { s, n, i } = S.edit, v = d.v === '' ? null : Number(d.v), old = D.j.journal[s].grades[n][i];
+    R('journal/journal/' + s + '/grades/' + n + '/' + i).set(v).catch(() => toast('Не удалось сохранить'));
+    D.j.journal[s].grades[n][i] = v; closeSheet(); ROUTES.journal.fill();
+    if (v != null && v !== old) queueGrade({ s, n, g: v });
+  },
+  jdate() {
+    const j = D.j.journal[S.jsub], dates = j.dates || [];
+    sheet('Новая дата', `<p class="ssub" style="margin-top:-6px">${esc(S.jsub)}</p><label class="field"><span>Дата урока</span><input class="inp" id="jd" type="date" value="${ymd(new Date())}"/></label><p class="err" id="jerr"></p><button class="btn" data-act="jdateAdd">Добавить дату</button>
+      ${dates.length ? `<div class="sec"><h3>Уже в журнале</h3></div><div class="pills" style="flex-wrap:wrap;margin:0;padding:0;overflow:visible">${dates.map((x, i) => `<button class="pill" data-act="jdateDel" data-i="${i}" aria-label="Удалить дату">${fmtShort(parseYMD(x))} ✕</button>`).join('')}</div>` : ''}`);
+  },
+  jdateAdd() {
+    if (!needDB()) return; const v = $('#jd').value, j = D.j.journal[S.jsub];
+    if (!v) { const e = $('#jerr'); e.textContent = 'Выберите дату'; e.style.display = 'block'; return; }
+    if (j.dates.includes(v)) { const e = $('#jerr'); e.textContent = 'Эта дата уже есть'; e.style.display = 'block'; return; }
+    const dates = j.dates.concat(v).sort(), idx = dates.indexOf(v);
+    const grades = {}; ST.forEach(n => { const g = j.grades[n].slice(); g.splice(idx, 0, null); grades[n] = g; });
+    saveSubject(S.jsub, dates, grades); closeSheet(); toast('Дата добавлена');
+    sendNotify({ type:'grades', title:'📅 ' + S.jsub, body:'Новая дата в журнале', section:'grades', grades:[] });
+  },
+  jdateDel(d) {
+    if (!needDB()) return; const j = D.j.journal[S.jsub], i = +d.i, dates = j.dates.slice(); dates.splice(i, 1);
+    const grades = {}; ST.forEach(n => { const g = j.grades[n].slice(); g.splice(i, 1); grades[n] = g; });
+    saveSubject(S.jsub, dates, grades); closeSheet(); toast('Дата удалена');
+  },
+  jsubj() { sheet('Новый предмет', `<label class="field"><span>Название</span><input class="inp" id="sn" maxlength="30" placeholder="Например, Химия"/></label><p class="err" id="serr"></p><button class="btn" data-act="jsubjAdd">Добавить предмет</button>`); },
+  jsubjAdd() {
+    if (!needDB()) return; const v = $('#sn').value.trim(), e = $('#serr');
+    if (!v) { e.textContent = 'Введите название'; e.style.display = 'block'; return; }
+    if (/[.#$\[\]\/]/.test(v)) { e.textContent = 'Уберите символы . # $ [ ] /'; e.style.display = 'block'; return; }
+    if (D.j.subjects.some(s => norm(s) === norm(v))) { e.textContent = 'Такой предмет уже есть'; e.style.display = 'block'; return; }
+    R('journal/subjects').set(D.j.subjects.concat(v)).then(() => { S.jsub = v; }).catch(() => toast('Не удалось сохранить')); closeSheet();
+  },
+  /* ДЗ */
+  hwf(d) { S.hwf = d.v; ROUTES.hw.fill(); },
+  hwtoggle(d) { if (!needDB()) return; const t = D.hw.find(x => String(x.id) === d.id); if (!t) return; t.done = !t.done; ROUTES.hw.fill(); R('homework/' + d.id + '/done').set(t.done).catch(() => toast('Не удалось сохранить')); },
+  hwdel(d) { needTeacher(() => { if (!needDB()) return; D.hw = D.hw.filter(x => String(x.id) !== d.id); ROUTES.hw.fill(); R('homework/' + d.id).remove(); toast('Задание удалено'); }); },
+  hwadd() {
+    needTeacher(() => { const t = new Date(); t.setDate(t.getDate() + 1);
+      sheet('Новое ДЗ', `<label class="field"><span>Предмет</span><select class="inp" id="hs">${allSubjects().map(s => `<option>${esc(s)}</option>`).join('')}</select></label>
+        <label class="field"><span>Задание</span><textarea class="inp" id="ht" maxlength="160" placeholder="Например, параграф 12, задачи 1–5"></textarea></label>
+        <label class="field"><span>Срок сдачи</span><input class="inp" id="hd" type="date" value="${ymd(t)}"/></label><p class="err" id="herr">Опишите задание</p><button class="btn" data-act="hwsave">Добавить ДЗ</button>`); });
+  },
+  hwsave() {
+    if (!needDB()) return; const title = $('#ht').value.trim(); if (!title) { $('#herr').style.display = 'block'; return; }
+    const task = { id: Date.now(), title, subject: $('#hs').value, due: $('#hd').value, done: false };
+    R('homework/' + task.id).set(task).then(() => sendNotify({ type:'hw', title:'📝 Новое ДЗ', section:'homework', body: task.subject + ' — ' + task.title + (task.due ? '\n📅 До: ' + fmtLong(parseYMD(task.due)) : '') })).catch(() => toast('Не удалось сохранить'));
+    closeSheet(); toast('ДЗ добавлено');
+  },
+  /* расписание */
+  day(d) { S.day = +d.d; ROUTES.schedule.fill(); },
+  schchange() {
+    const opts = [1, 2, 3, 4, 5, 6].map(d => `<option value="${ymd(dateOfDow(d))}">${WD[d]}, ${fmtShort(dateOfDow(d))}</option>`).join('');
+    sheet('Изменить урок', `<label class="field"><span>День</span><select class="inp" id="cd">${opts}</select></label>
+      <label class="field"><span>Номер урока</span><select class="inp" id="cn">${[1,2,3,4,5,6,7].map(n => `<option>${n}</option>`).join('')}</select></label>
+      <label class="field"><span>Что будет вместо него</span><select class="inp" id="cs"><option value="">Отменить урок</option>${allSubjects().map(s => `<option>${esc(s)}</option>`).join('')}</select></label>
+      <p class="err" id="cerr2"></p><button class="btn" data-act="schsave">Сохранить изменение</button>
+      ${D.changes.length ? `<div class="sec"><h3>Уже внесены</h3></div>${D.changes.slice(0, 6).map(c => `<div class="kv"><span style="flex:1">${esc(c.text)}</span><button class="mini-x" data-act="schdel" data-id="${esc(c.id)}" aria-label="Удалить">${ic('trash', 17)}</button></div>`).join('')}` : ''}`);
+  },
+  schsave() {
+    if (!needDB()) return; const ds = $('#cd').value, n = +$('#cn').value, ns = $('#cs').value, date = parseYMD(ds);
+    const old = (SCHEDULE[date.getDay()] || [])[n - 1]; const oldS = old ? old[0] : '', e = $('#cerr2');
+    if (!ns && !oldS) { e.textContent = 'В этот день нет урока №' + n + ', отменять нечего'; e.style.display = 'block'; return; }
+    if (ns && norm(ns) === norm(oldS)) { e.textContent = 'Предмет совпадает с обычным — изменений нет'; e.style.display = 'block'; return; }
+    const text = `${WD[date.getDay()]}, ${fmtShort(date)}: ${n}-й урок ` + (ns ? (oldS ? `«${oldS}» заменён на «${ns}»` : `— «${ns}»`) : `«${oldS}» отменён`);
+    const id = String(Date.now());
+    R('schedule_changes/' + id).set({ id, date: ds, lesson: n, newSubject: ns, oldSubject: oldS, cancel: !ns, text, ts: Date.now() })
+      .then(() => sendNotify({ type:'schedule', title:'🚨 Изменение расписания', body:text, section:'schedule' })).catch(() => toast('Не удалось сохранить'));
+    closeSheet(); toast('Расписание обновлено');
+  },
+  schdel(d) { if (!needDB()) return; R('schedule_changes/' + d.id).remove(); closeSheet(); toast('Изменение удалено'); },
+  /* объявления */
+  annadd() {
+    needTeacher(() => sheet('Новое объявление', `<label class="field"><span>Значок</span><select class="inp" id="ai">${['📢','📝','⚠️','🎉','📅','🏆','📚'].map(x => `<option>${x}</option>`).join('')}</select></label>
+      <label class="field"><span>Заголовок</span><input class="inp" id="at" maxlength="80"/></label><label class="field"><span>Текст</span><textarea class="inp" id="ax" maxlength="500"></textarea></label><p class="err" id="aerr">Заполните заголовок и текст</p><button class="btn" data-act="annsave">Опубликовать</button>`));
+  },
+  annsave() {
+    if (!needDB()) return; const title = $('#at').value.trim(), text = $('#ax').value.trim(); if (!title || !text) { $('#aerr').style.display = 'block'; return; }
+    const id = String(Date.now());
+    R('announcements/' + id).set({ id, icon: $('#ai').value, title, text, ts: Date.now() }).then(() => sendNotify({ type:'ann', title:'📢 ' + title, body:text.slice(0, 120), section:'announcements' })).catch(() => toast('Не удалось сохранить'));
+    closeSheet(); toast('Опубликовано');
+  },
+  anndel(d) { needTeacher(() => { if (!needDB()) return; R('announcements/' + d.id).remove(); toast('Объявление удалено'); }); },
+  /* фильтры уведомлений */
+  nf(d) { S.nf = d.v; ROUTES.notifs.fill(); },
+  notifSettings() {
+    const st = LS.json('st_settings'), on = k => st[k] !== false ? 'checked' : '', row = (k, t, s) => `<div class="row" style="padding:12px 0;border-bottom:1px solid var(--line)"><span class="grow"><div class="t">${t}</div><div class="s">${s}</div></span><label class="sw"><input type="checkbox" data-ch="pref" data-k="${k}" ${on(k)}/><i></i></label></div>`;
+    sheet('Настройки уведомлений', `<div class="row" style="padding:12px 0;border-bottom:1px solid var(--line)"><span class="grow"><div class="t">Все уведомления</div><div class="s">Главный переключатель</div></div><label class="sw"><input type="checkbox" data-ch="master" ${masterOn() ? 'checked' : ''}/><i></i></label></div>
+      ${row('notifHW','Новое ДЗ','Предмет и задание')}${row('notifSched','Изменения расписания','Замены и отмена уроков')}${row('notifGrades','Новые оценки','Только ваши оценки')}${row('notifAnn','Объявления','От учителя')}${row('notifChat','Ответы в чате','Когда вам ответили')}
+      <button class="btn" style="margin-top:14px" data-act="notifTest">Включить и проверить</button>`);
+  },
+  notifTest() {
+    if (!('Notification' in window)) { toast('Браузер не поддерживает уведомления'); return; }
+    if (Notification.permission === 'denied') { toast('Уведомления заблокированы в настройках браузера'); return; }
+    const ok = () => showNative('✅ Уведомления работают', 'Так будут выглядеть уведомления с сайта', 'site-test', '');
+    if (Notification.permission === 'granted') ok(); else Notification.requestPermission().then(p => { if (p === 'granted') ok(); });
+  },
+  /* чат */
+  chatsend() {
+    const i = $('#chatIn'), text = (i.value || '').trim(); if (!text || !needDB()) return;
+    const msg = { sender: me(), color: pal(me())[0], text, ts: Date.now(), type: 'text' };
+    if (S.reply) { msg.replyText = S.reply.text; msg.replySender = S.reply.sender; }
+    R('chat').push(msg).catch(() => toast('Не отправлено')); i.value = ''; i.style.height = 'auto'; S.reply = null; S.chatStick = true; ROUTES.chatroom.fill();
+  },
+  replyx() { S.reply = null; ROUTES.chatroom.fill(); },
+  msg(d) {
+    const m = D.chat[d.k]; if (!m) return; const own = m.sender === me();
+    sheet('', `<div class="s muted" style="font-size:12px;margin-bottom:2px">${esc(m.sender)}</div><div style="font-size:13.5px;white-space:pre-wrap;word-break:break-word">${esc(String(m.text).slice(0, 200))}</div>
+      <div class="react-row">${REACTIONS.map(e => `<button data-act="react" data-k="${esc(d.k)}" data-e="${e}">${e}</button>`).join('')}</div>
+      <div class="act-list"><button data-act="replyto" data-k="${esc(d.k)}">${ic('reply', 19)} Ответить</button><button data-act="copymsg" data-k="${esc(d.k)}">${ic('copy', 19)} Копировать</button>${own || isTeacher() ? `<button data-act="msgdel" data-k="${esc(d.k)}" style="color:var(--red)">${ic('trash', 19)} Удалить</button>` : ''}</div>`);
+  },
+  react(d) { if (!needDB()) return; R('chat/' + d.k + '/reactions/' + d.e).transaction(c => (c || 0) + 1); closeSheet(); },
+  replyto(d) { const m = D.chat[d.k]; if (!m) return; S.reply = { sender: m.sender, text: String(m.text).slice(0, 80) }; closeSheet(); ROUTES.chatroom.fill(); const i = $('#chatIn'); if (i) i.focus(); },
+  copymsg(d) { const m = D.chat[d.k]; if (m && navigator.clipboard) navigator.clipboard.writeText(m.text).then(() => toast('Скопировано')).catch(() => {}); closeSheet(); },
+  msgdel(d) { if (!needDB()) return; R('chat/' + d.k).remove(); closeSheet(); },
+  /* оплата / прогулы */
+  payedit(d) {
+    S.payN = d.n; const p = paidOf(d.n);
+    sheet(esc(d.n), `<p class="ssub" style="margin-top:-6px">Оплачено из ${TOTAL_PAY.toLocaleString('ru-RU')} с.</p><label class="field"><span>Внесено, сомони</span><input class="inp" id="pv" type="number" inputmode="numeric" min="0" max="${TOTAL_PAY}" value="${p}"/></label><button class="btn" data-act="paysave">Сохранить</button><button class="btn ghost" style="margin-top:10px" data-act="payfull">Оплачено полностью</button>`);
+  },
+  paysave() { if (!needDB()) return; const v = Math.max(0, Math.min(TOTAL_PAY, Math.round(Number($('#pv').value) || 0))); R('payment/' + S.payN).set({ paid: v }); closeSheet(); toast('Сохранено'); },
+  payfull() { if (!needDB()) return; R('payment/' + S.payN).set({ paid: TOTAL_PAY }); closeSheet(); toast('Сохранено'); },
+  attp(d) { setAbs(d.n, absOf(d.n) + 1); }, attm(d) { setAbs(d.n, Math.max(0, absOf(d.n) - 1)); }
+};
+function setAbs(n, v) {
+  if (!needDB()) return; D.att[n] = Object.assign({ name: n, phone: PHONE[n] }, D.att[n], { absences: v }); ROUTES.att.fill();
+  R('attendance/' + n.replace(/\s+/g, '_')).set({ name: n, phone: PHONE[n] || '', absences: v });
+}
+function saveSubject(s, dates, grades) {
+  const g = {}; ST.forEach(n => { g[n] = grades[n]; });
+  D.j.journal[s] = { dates, grades }; ROUTES.journal.fill();
+  R('journal/journal/' + s).set({ dates, grades: g }).catch(() => toast('Не удалось сохранить'));
+}
+function doLogin(name) {
+  LS.set('chat_name', name); LS.set('login_user', JSON.stringify({ name }));
+  closeSheet(); go('home', {}, { tab: true });
+}
+
+/* ═══════════════ СОБЫТИЯ ═══════════════ */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const f = ACT[t.dataset.act]; if (f) f(t.dataset, t, e);
+});
+document.addEventListener('input', e => {
+  const t = e.target, k = t.dataset && t.dataset.in; if (!k) return;
+  if (k === 'clsq') { S.cq = t.value; ROUTES.classes.fill(); }
+  else if (k === 'stq') ROUTES.class.fill();
+  else if (k === 'chq') ROUTES.chat.fill();
+  else if (k === 'chatin') { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 110) + 'px'; }
+});
+document.addEventListener('change', e => {
+  const t = e.target, k = t.dataset && t.dataset.ch; if (!k) return;
+  if (k === 'lcls') fillLoginNames();
+  else if (k === 'schday') schSheet(+t.value);
+  else if (k === 'jsort') { S.jsort = t.value; ROUTES.journal.fill(); }
+  else if (k === 'master') { const s = LS.json('myp_settings'); s.notifs = t.checked; LS.set('myp_settings', JSON.stringify(s)); }
+  else if (k === 'pref') { const s = LS.json('st_settings'); s[t.dataset.k] = t.checked; LS.set('st_settings', JSON.stringify(s)); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSheet();
+  if (e.target && e.target.id === 'chatIn' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ACT.chatsend(); }
+  if (e.target && e.target.id === 'tpass' && e.key === 'Enter') ACT.tsubmit();
+  if (e.target && e.target.id === 'dpass' && e.key === 'Enter') ACT.dsubmit();
+});
+
+/* ═══════════════ СТАРТ ═══════════════ */
+listenClasses();
+if (curCid()) listenClass(curCid());
+setInterval(() => { if (S.route === 'home' || S.route === 'schedule') refresh(); }, 60000);
+if (me() && (curCid() || isDirector())) go(HASH_ROUTE[location.hash] || 'home', {}, { replace: true }); else go('welcome', {}, { replace: true });
+})();
+</script>
+</body>
+</html>
