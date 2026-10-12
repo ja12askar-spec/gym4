@@ -241,6 +241,11 @@ button.gcb:active{background:var(--blue-soft)}
 .send{width:44px;height:44px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 8px 16px -6px rgba(23,105,255,.7)}
 
 /* ── Оплата / посещаемость ── */
+.am{min-width:46px;height:38px;border-radius:12px;font-weight:800;font-size:17px;background:#EEF2FA;color:#9AA8C2;flex:none}
+.am.p{background:var(--green-soft);color:var(--green)}
+.am.a{background:var(--red-soft);color:var(--red)}
+.alesson{border:1.5px solid transparent}
+.alesson.sel{border-color:#7FA9F5;background:#F4F8FF}
 .bar{height:7px;border-radius:99px;background:#E8EEF9;overflow:hidden}
 .bar i{display:block;height:100%;border-radius:99px;background:var(--c,var(--blue))}
 .big{font-size:26px;font-weight:800;letter-spacing:-.5px}
@@ -405,11 +410,12 @@ const subjPal = s => pal('s:' + norm(s));
 
 /* ═══════════════ СОСТОЯНИЕ ═══════════════ */
 const DB = window.firebaseDB || null;
-const D = { classes:{}, classesLoaded:false, j:{ subjects:[], journal:{} }, hw:[], att:{}, pay:{}, ann:[], changes:[], chat:{} };
+const D = { classes:{}, classesLoaded:false, j:{ subjects:[], journal:{} }, hw:[], att:{}, alog:{}, pay:{}, ann:[], changes:[], chat:{} };
 let RAW_J = null;
 const S = { route:'', params:{}, stack:[], jsub:'all', jsort:'alpha', hwf:'all', day:null, cq:'', ctab:'students', nf:'all', reply:null, edit:null, chatStick:true };
 
 const me = () => LS.get('chat_name', '');
+const dispName = () => isDirector() ? 'Директор' : me();
 const isDirector = () => SS.get('director') === '1';
 const isTeacher = () => SS.get('teacher') === '1' || isDirector();
 const roleName = () => isDirector() ? 'Директор' : isTeacher() ? 'Учитель' : 'Ученик';
@@ -454,7 +460,11 @@ function overall(n) { const v = D.j.subjects.map(s => avg(s, n)).filter(x => x !
 function ranking() { return ST.map(n => ({ n, a: overall(n) })).filter(x => x.a != null).sort((a, b) => b.a - a.a); }
 function rankOf(n) { const r = ranking(), i = r.findIndex(x => x.n === n); return i < 0 ? null : { pos: i + 1, total: r.length }; }
 function classAvg(s) { const v = ST.map(n => avg(s, n)).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }
-const absOf = n => (D.att[n] && Number(D.att[n].absences)) || 0;
+const attKey = n => String(n).replace(/[\s.#$\[\]\/]+/g, '_');
+/* отметки по урокам: attendance_log/{дата}/l{номер урока}/{ученик} = 1 (+) или 0 (Н) */
+const markOf = (date, l, n) => { const x = D.alog && D.alog[date] && D.alog[date]['l' + l]; return x && x[attKey(n)] != null ? x[attKey(n)] : null; };
+function logAbs(n) { let c = 0; const k = attKey(n); Object.values(D.alog || {}).forEach(day => Object.values(day || {}).forEach(les => { if (les && les[k] === 0) c++; })); return c; }
+const absOf = n => ((D.att[n] && Number(D.att[n].absences)) || 0) + logAbs(n);
 const paidOf = n => (D.pay[n] && Number(D.pay[n].paid)) || 0;
 function abbr(s) {
   const m = { 'Математика':'Матем.', 'Английский':'Англ.', 'Английский язык':'Англ.', 'Русский':'Рус. яз.', 'Русский язык':'Рус. яз.', 'Информатика':'Информ.', 'История':'Истор.', 'Литература':'Литер.' };
@@ -507,7 +517,7 @@ const subs = [];
 function on(ref, ev, fn) { ref.on(ev, fn); subs.push([ref, ev, fn]); }
 function unlisten() {
   subs.forEach(x => x[0].off(x[1], x[2])); subs.length = 0;
-  Object.assign(D, { j:{ subjects:[], journal:{} }, hw:[], att:{}, pay:{}, ann:[], changes:[], chat:{} }); RAW_J = null; SCHEDULE = {};
+  Object.assign(D, { j:{ subjects:[], journal:{} }, hw:[], att:{}, alog:{}, pay:{}, ann:[], changes:[], chat:{} }); RAW_J = null; SCHEDULE = {};
 }
 function rebuildStudents() {
   const c = cls(), list = c ? c.students.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru')) : [];
@@ -541,6 +551,7 @@ function listenClass(cid) {
     on(b.child('journal'), 'value', s => { RAW_J = s.val(); D.j = normJournal(RAW_J); refresh(); });
     on(b.child('homework'), 'value', s => { D.hw = arr(s.val()); refresh(); });
     on(b.child('attendance'), 'value', s => { D.att = {}; arr(s.val()).forEach(x => { if (x.name) D.att[x.name] = x; }); refresh(); });
+    on(b.child('attendance_log'), 'value', s => { D.alog = s.val() || {}; refresh(); });
     on(b.child('payment'), 'value', s => { D.pay = s.val() || {}; refresh(); });
     on(b.child('announcements'), 'value', s => { D.ann = arr(s.val()).sort((a, b) => (b.ts || 0) - (a.ts || 0)); refresh(); });
     on(b.child('schedule_changes'), 'value', s => { D.changes = arr(s.val()).sort((a, b) => (b.ts || 0) - (a.ts || 0)); refresh(); });
@@ -704,7 +715,7 @@ const fullName = (l, f, m) => [l, f, m].filter(Boolean).join(' ');
 function studentSheet(r) {
   r = r || {};
   sheet(r.id ? 'Изменить ученика' : 'Новый ученик', `${fld('sl', 'Фамилия', r.last, 'Иванов')}${fld('sf', 'Имя', r.first, 'Иван')}${fld('sm', 'Отчество', r.middle, 'Иванович')}${fldPhone(r.phone)}
-    <p class="err" id="sterr"></p><button class="btn" data-act="stusave" data-id="${esc(r.id || '')}">${r.id ? 'Сохранить' : 'Добавить ученика'}</button>`);
+    <p class="err" id="sterr"></p><button class="btn" data-act="stusave" data-id="${esc(r.id || '')}">${r.id ? 'Сохранить' : 'Добавить ученика'}</button>${r.id ? `<button class="btn ghost" style="margin-top:10px" data-act="pinreset" data-id="${esc(r.id)}">Сбросить PIN-код</button>` : ''}`);
 }
 const stuAdmin = n => {
   if (!isDirector() || !cls()) return '';
@@ -720,6 +731,8 @@ function moveStudent(old, nu) {
     up[b + 'journal/journal/' + s + '/grades/' + old] = null;
   });
   if (D.att[old]) { if (nu) up[b + 'attendance/' + key(nu)] = Object.assign({}, D.att[old], { name: nu }); up[b + 'attendance/' + key(old)] = null; }
+  Object.keys(D.alog || {}).forEach(dt => Object.keys(D.alog[dt] || {}).forEach(l => { const v = D.alog[dt][l] && D.alog[dt][l][attKey(old)]; if (v == null) return;
+    if (nu) up[b + 'attendance_log/' + dt + '/' + l + '/' + attKey(nu)] = v; up[b + 'attendance_log/' + dt + '/' + l + '/' + attKey(old)] = null; }));
   if (D.pay[old]) { if (nu) up[b + 'payment/' + nu] = D.pay[old]; up[b + 'payment/' + old] = null; }
   return up;
 }
@@ -778,7 +791,7 @@ ROUTES.home = {
   tab: 'home',
   shell: () => `<div class="home-top"><h1>Моя Школа</h1><div class="home-r">
       <button class="ib" data-act="go" data-r="notifs" aria-label="Уведомления">${ic('bell', 23)}<i class="dot" id="bellDot"></i></button>
-      <button class="av-btn" data-act="go" data-r="profile" aria-label="Профиль">${avatar(me() || '?', 38)}</button></div></div>
+      <button class="av-btn" data-act="go" data-r="profile" aria-label="Профиль">${avatar(dispName() || '?', 38)}</button></div></div>
     ${DB ? '' : '<div class="note">Нет связи с базой данных. Проверьте интернет и обновите страницу.</div>'}
     <div class="hello"><p class="hi">${greet()},<br><b>${esc(firstName())}!</b></p><p class="muted">Сегодня, ${fmtLong(new Date())}</p></div>
     <div id="homeClass"></div>
@@ -795,7 +808,7 @@ ROUTES.home = {
     const hc = $('#homeClass'); if (hc) hc.innerHTML = homeClassCard();
     const mine = myStudent(), st = $('#homeStats');
     if (st) {
-      if (mine && overall(mine) != null) {
+      if (!isDirector() && mine && overall(mine) != null) {
         const r = rankOf(mine);
         st.innerHTML = `<div class="sec"><h3>Моя успеваемость</h3></div><div class="stats">
           <div class="card stat"><b>${fmtN(overall(mine))}</b><small>Средний балл</small></div>
@@ -973,8 +986,8 @@ ROUTES.notifs = {
 /* ── Профиль ── */
 ROUTES.profile = {
   tab: 'more',
-  shell: () => { const n = me(), t = isTeacher();
-    return `${header('Профиль', { back: true })}<div class="prof-head">${avatar(n || '?', 60)}<div><div class="t">${esc(n || 'Гость')}</div><div class="s">${roleName()} · ${esc(cname())}</div></div></div>
+  shell: () => { const n = dispName(), t = isTeacher();
+    return `${header('Профиль', { back: true })}<div class="prof-head">${avatar(n || '?', 60)}<div><div class="t">${esc(n || 'Гость')}</div><div class="s">${isDirector() ? SCHOOL : roleName() + ' · ' + esc(cname())}</div></div></div>
     <div class="card menu">
       <button class="row" data-act="personal"><span class="mic">${ic('user', 21)}</span><span class="grow t">Личные данные</span><span class="chev">${ic('right', 16, 2.2)}</span></button>
       <button class="row" data-act="notifSettings"><span class="mic">${ic('bell', 21)}</span><span class="grow t">Настройки уведомлений</span><span class="chev">${ic('right', 16, 2.2)}</span></button>
@@ -1062,14 +1075,36 @@ ROUTES.pay = {
 const attSt = n => n === 0 ? ['yes','Хорошо'] : n === 1 ? ['warn','Начало'] : n <= 3 ? ['warn','Внимание'] : ['no','Критично'];
 ROUTES.att = {
   tab: 'more',
-  shell: () => `${header('Посещаемость', { back: true })}<div id="attTop"></div><div id="attList" class="card" style="overflow:hidden;margin-top:12px"></div>`,
+  shell: () => { if (!S.attDate) { const t = startOfDay(new Date()); if (t.getDay() === 0) t.setDate(t.getDate() - 1); S.attDate = ymd(t); }
+    return `${header('Посещаемость', { back: true })}<div id="attTop"></div>
+    ${isTeacher() ? `<div class="sec"><h3>Отметить урок</h3></div><label class="field" style="margin-bottom:10px"><span>Дата</span><input class="inp" type="date" id="attDate" data-ch="attdate" value="${S.attDate}"/></label><div class="days" id="attDays">${[1, 2, 3, 4, 5, 6].map(d => `<button class="day" data-act="attday" data-d="${d}">${WD_SHORT[d]}</button>`).join('')}</div><div id="attLessons" class="list"></div><div id="attMark"></div>` : ''}
+    <div class="sec"><h3>Всего прогулов</h3></div><div id="attList" class="card" style="overflow:hidden"></div>`; },
   fill() {
     const top = $('#attTop'), el = $('#attList'); if (!top || !el) return;
     const clean = ST.filter(n => absOf(n) === 0).length, crit = ST.filter(n => absOf(n) >= 4).length, total = ST.reduce((a, n) => a + absOf(n), 0);
     top.innerHTML = `<div class="stats"><div class="card stat"><b>${clean}</b><small>Без прогулов</small></div><div class="card stat"><b>${crit}</b><small>Критично</small></div><div class="card stat"><b>${total}</b><small>Всего прогулов</small></div></div>`;
     el.innerHTML = ST.map(n => { const a = absOf(n), s = attSt(a);
-      return `<div class="row" style="border-bottom:1px solid var(--line)">${avatar(n, 36)}<span class="grow"><div class="t" style="font-weight:600">${esc(n)}</div><span class="chip ${s[0]}" style="margin-top:4px">${s[1]}</span></span>
-      ${isTeacher() ? `<span class="stepper"><button data-act="attm" data-n="${esc(n)}" aria-label="Минус">−</button><b>${a}</b><button data-act="attp" data-n="${esc(n)}" aria-label="Плюс">+</button></span>` : `<b style="font-size:16px">${a}</b>`}</div>`; }).join('');
+      return `<div class="row" style="border-bottom:1px solid var(--line)">${avatar(n, 36)}<span class="grow"><div class="t" style="font-weight:600">${esc(n)}</div><span class="chip ${s[0]}" style="margin-top:4px">${s[1]}</span></span><b style="font-size:16px">${a}</b></div>`; }).join('');
+    if (!isTeacher()) return;
+    const date = parseYMD(S.attDate), dk = S.attDate; $$('#attDays .day').forEach(b => b.classList.toggle('on', +b.dataset.d === (date.getDay() || 7)));
+    const di = $('#attDate'); if (di && di.value !== S.attDate) di.value = S.attDate;
+    const ls = lessonsFor(date).filter(l => l.status !== 'cancel');
+    const le = $('#attLessons'), me_ = $('#attMark');
+    le.innerHTML = `<p class="muted" style="margin:-4px 2px 2px;font-size:12px">${WD[date.getDay()]}, ${fmtLong(date)} — выберите урок</p>` + (ls.length ? ls.map(l => {
+      const cnt = ST.filter(n => markOf(dk, l.n, n) != null).length, sel = S.attLesson === l.n;
+      return `<button class="card row lesson alesson ${sel ? 'sel' : ''}" data-act="attlesson" data-l="${l.n}"><span class="num" style="${cv(PAL[(l.n - 1) % 5])}">${l.n}</span>
+        <span class="grow"><div class="time">${l.time ? fmtTime(l.time) : ''}</div><div class="t">${esc(l.name)}</div></span>
+        <span class="chip ${cnt === 0 ? '' : cnt >= ST.length ? 'yes' : 'warn'}">${cnt === 0 ? 'Не отмечен' : cnt >= ST.length ? 'Отмечен' : cnt + ' из ' + ST.length}</span></button>`; }).join('')
+      : `<div class="card">${empty('Уроков нет', 'В этот день нет уроков по расписанию')}</div>`);
+    const cur = ls.find(l => l.n === S.attLesson);
+    if (!cur) { me_.innerHTML = ''; return; }
+    const pr = ST.filter(n => markOf(dk, cur.n, n) === 1).length, ab = ST.filter(n => markOf(dk, cur.n, n) === 0).length;
+    me_.innerHTML = `<div class="sec"><h3>${esc(cur.name)} · урок ${cur.n}</h3><span class="muted" style="font-size:12px">+ ${pr} · Н ${ab}</span></div>
+      <div class="card" style="overflow:hidden">${ST.map(n => { const v = markOf(dk, cur.n, n);
+        return `<div class="row" style="border-bottom:1px solid var(--line)">${avatar(n, 36)}<span class="grow"><div class="t" style="font-weight:600">${esc(n)}</div></span>
+        <button class="am ${v === 1 ? 'p' : v === 0 ? 'a' : ''}" data-act="attmark" data-n="${esc(n)}" aria-label="Отметка">${v === 1 ? '+' : v === 0 ? 'Н' : '·'}</button></div>`; }).join('')}</div>
+      <div class="jbtns" style="margin-top:12px"><button class="btn sm" data-act="attall">${ic('check', 16, 2.4)} Все присутствуют</button><button class="btn sm ghost" data-act="attclear">Сбросить</button></div>
+      <p class="muted" style="font-size:11.5px;margin:10px 2px 0">Нажмите на кружок: · → + (был) → Н (не был) → ·</p>`;
   }
 };
 
@@ -1105,7 +1140,17 @@ const ACT = {
       : `<p class="ssub" id="lempty" style="margin-top:-6px">${D.classesLoaded ? 'Классов пока нет. Их создаёт директор.' : 'Загрузка списка классов…'}</p>`)
       + `<button class="btn ghost" style="margin-top:10px" data-act="tlogin">Я учитель</button><button class="btn ghost" style="margin-top:10px" data-act="dlogin">Я директор</button>`);
   },
-  loginGo() { const c = ($('#lcls') || {}).value, v = ($('#lname') || {}).value; if (!c || !v) { $('#lerr').style.display = 'block'; return; } setClass(c); doLogin(v); },
+  loginGo() { const c = ($('#lcls') || {}).value, v = ($('#lname') || {}).value; if (!c || !v) { $('#lerr').style.display = 'block'; return; }
+    if (!needDB(true)) return; const st = D.classes[c] && D.classes[c].students.find(x => x.name === v); if (!st) { $('#lerr').style.display = 'block'; return; }
+    pinRef(c, st.id).once('value').then(sn => { const val = sn.val(); pinSheet({ c, id: st.id, name: v, h: val && val.h, s: val && val.s }, !!(val && val.h)); }).catch(() => toast('Не удалось проверить вход. Проверьте интернет')); },
+  async pincheck() { const r = S.pinFor, lk = pinLocked(); if (!r) return; if (lk) return pinErr('Слишком много попыток. Подождите ' + lk + ' сек.');
+    const v = ($('#pin1') || {}).value || ''; if (!pinOk().test(v)) return pinErr('Введите PIN из 4–6 цифр');
+    if (await pinHash(v, r.s) === r.h) { LS.set('pin_try', 0); S.pinFor = null; setClass(r.c); doLogin(r.name); } else { pinFail(); pinErr(pinLocked() ? 'Слишком много попыток. Подождите минуту.' : 'Неверный PIN-код'); } },
+  async pinset() { const r = S.pinFor; if (!r) return; const a = ($('#pin1') || {}).value || '', b = ($('#pin2') || {}).value || '';
+    if (!pinOk().test(a)) return pinErr('PIN должен состоять из 4–6 цифр'); if (a !== b) return pinErr('PIN-коды не совпадают');
+    const salt = Math.random().toString(36).slice(2) + Date.now().toString(36), h = await pinHash(a, salt);
+    pinRef(r.c, r.id).transaction(cur => cur && cur.h ? undefined : { s: salt, h }).then(res => { if (res && res.committed) { S.pinFor = null; setClass(r.c); doLogin(r.name); } else { toast('PIN уже создан. Введите его'); ACT.loginGo(); } }).catch(() => pinErr('Не удалось сохранить. Проверьте интернет')); },
+  pinreset(d) { needDirector(() => { if (!needDB() || !d.id) return; pinRef(curCid(), d.id).remove().then(() => toast('PIN сброшен. Ученик создаст новый при входе')).catch(() => toast('Не удалось сбросить')); }); },
   createSheet() {
     if (!classList().length) { sheet('Новый аккаунт', `<p class="ssub" style="margin-top:-6px">Классов пока нет. Их создаёт директор.</p>`); return; }
     sheet('Новый аккаунт', `<p class="ssub" style="margin-top:-6px">Для тех, кого нет в списке класса. Имя сохранится на этом устройстве.</p>
@@ -1113,7 +1158,10 @@ const ACT = {
       <label class="field"><span>Фамилия и имя</span><input class="inp" id="cname" maxlength="40" placeholder="Например, Иванов Иван" autocomplete="name"/></label><p class="err" id="cerr">Выберите класс и введите имя (минимум 2 буквы)</p>
       <button class="btn" data-act="createGo">Создать аккаунт</button>`);
   },
-  createGo() { const c = ($('#ccls') || {}).value, v = $('#cname').value.trim(); if (!c || v.length < 2) { $('#cerr').style.display = 'block'; return; } setClass(c); doLogin(v); },
+  createGo() { const c = ($('#ccls') || {}).value, v = $('#cname').value.trim(); if (!c || v.length < 2) { $('#cerr').textContent = 'Выберите класс и введите имя (минимум 2 буквы)'; $('#cerr').style.display = 'block'; return; }
+    const taken = Object.values(D.classes).some(k => (k.students || []).some(x => norm(x.name) === norm(v))) || ['директор', 'учитель'].includes(norm(v));
+    if (taken) { $('#cerr').textContent = 'Такое имя уже есть в списке. Нажмите «Войти» и выберите себя — понадобится PIN-код'; $('#cerr').style.display = 'block'; return; }
+    setClass(c); doLogin(v); },
   tlogin() {
     const wc = !curCid(), pre = ($('#lcls') || {}).value || '';
     askTeacher(() => { if (!me()) LS.set('chat_name', (cls() && cls().teacher && cls().teacher.name) || 'Учитель'); closeSheet(); if (S.route === 'welcome') go('home', {}, { tab: true }); else render(); toast('Режим учителя включён'); }, wc, pre);
@@ -1220,8 +1268,8 @@ const ACT = {
   },
   help() { sheet('Помощь', `<div class="kv"><span>Установка</span><b>Меню браузера → «На главный экран»</b></div><div class="kv"><span>Уведомления</span><b>Профиль → Настройки уведомлений</b></div><div class="kv"><span>Оценки, ДЗ, объявления</span><b>Добавляет учитель после входа по паролю</b></div><div class="kv"><span>Классы и ученики</span><b>Добавляет директор после входа по паролю</b></div><div class="kv"><span>Статус ДЗ</span><b>Нажмите на «Выполнено» / «Не выполнено»</b></div>`); },
   personal() {
-    const n = me(), s = myStudent();
-    sheet('Личные данные', `<div class="kv"><span>Имя</span><b>${esc(n)}</b></div><div class="kv"><span>Роль</span><b>${roleName()}</b></div><div class="kv"><span>Класс</span><b>${cls() ? esc(cname()) + ', ' + SCHOOL : '—'}</b></div>${s ? `<div class="kv"><span>Телефон</span><b>${esc(PHONE[s])}</b></div><div class="kv"><span>Прогулы</span><b>${absOf(s)}</b></div><div class="kv"><span>Оплата</span><b>${paidOf(s).toLocaleString('ru-RU')} из ${TOTAL_PAY.toLocaleString('ru-RU')} с.</b></div>` : ''}`);
+    const n = dispName(), s = isDirector() ? null : myStudent();
+    sheet('Личные данные', `<div class="kv"><span>Имя</span><b>${esc(n)}</b></div><div class="kv"><span>Роль</span><b>${roleName()}</b></div><div class="kv"><span>${isDirector() ? 'Школа' : 'Класс'}</span><b>${isDirector() ? SCHOOL : cls() ? esc(cname()) + ', ' + SCHOOL : '—'}</b></div>${s ? `<div class="kv"><span>Телефон</span><b>${esc(PHONE[s])}</b></div><div class="kv"><span>Прогулы</span><b>${absOf(s)}</b></div><div class="kv"><span>Оплата</span><b>${paidOf(s).toLocaleString('ru-RU')} из ${TOTAL_PAY.toLocaleString('ru-RU')} с.</b></div>` : ''}`);
   },
   /* ученик */
   stu(d) {
@@ -1361,8 +1409,20 @@ const ACT = {
   },
   paysave() { if (!needDB()) return; const v = Math.max(0, Math.min(TOTAL_PAY, Math.round(Number($('#pv').value) || 0))); R('payment/' + S.payN).set({ paid: v }); closeSheet(); toast('Сохранено'); },
   payfull() { if (!needDB()) return; R('payment/' + S.payN).set({ paid: TOTAL_PAY }); closeSheet(); toast('Сохранено'); },
-  attp(d) { setAbs(d.n, absOf(d.n) + 1); }, attm(d) { setAbs(d.n, Math.max(0, absOf(d.n) - 1)); }
+  attday(d) { const x = parseYMD(S.attDate), dw = x.getDay() || 7; x.setDate(x.getDate() + (+d.d - dw)); S.attDate = ymd(x); S.attLesson = null; ROUTES.att.fill(); },
+  attlesson(d) { S.attLesson = S.attLesson === +d.l ? null : +d.l; ROUTES.att.fill(); },
+  attmark(d) { if (!isTeacher() || !needDB() || !S.attLesson) return; const dk = S.attDate, cur = markOf(dk, S.attLesson, d.n);
+    setMarks(dk, S.attLesson, { [d.n]: cur == null ? 1 : cur === 1 ? 0 : null }); },
+  attall() { if (!isTeacher() || !needDB() || !S.attLesson) return; const dk = S.attDate, m = {};
+    ST.forEach(n => { if (markOf(dk, S.attLesson, n) == null) m[n] = 1; }); setMarks(dk, S.attLesson, m); toast('Отмечены присутствующие'); },
+  attclear() { if (!isTeacher() || !needDB() || !S.attLesson) return; const dk = S.attDate, m = {}; ST.forEach(n => { m[n] = null; }); setMarks(dk, S.attLesson, m); }
 };
+function setMarks(dk, l, marks) {
+  const up = {}, day = (D.alog[dk] = D.alog[dk] || {}), les = (day['l' + l] = day['l' + l] || {});
+  Object.keys(marks).forEach(n => { const k = attKey(n), v = marks[n]; if (v == null) delete les[k]; else les[k] = v; up[k] = v; });
+  ROUTES.att.fill();
+  R('attendance_log/' + dk + '/l' + l).update(up).catch(() => toast('Не удалось сохранить'));
+}
 function setAbs(n, v) {
   if (!needDB()) return; D.att[n] = Object.assign({ name: n, phone: PHONE[n] }, D.att[n], { absences: v }); ROUTES.att.fill();
   R('attendance/' + n.replace(/\s+/g, '_')).set({ name: n, phone: PHONE[n] || '', absences: v });
@@ -1371,6 +1431,26 @@ function saveSubject(s, dates, grades) {
   const g = {}; ST.forEach(n => { g[n] = grades[n]; });
   D.j.journal[s] = { dates, grades }; ROUTES.journal.fill();
   R('journal/journal/' + s).set({ dates, grades: g }).catch(() => toast('Не удалось сохранить'));
+}
+/* ── PIN-код ученика ── */
+function h53(str, seed = 0) { let a = 0xdeadbeef ^ seed, b = 0x41c6ce57 ^ seed; for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677); }
+  a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909); b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909); return (4294967296 * (2097151 & b) + (a >>> 0)).toString(16); }
+async function pinHash(pin, salt) {
+  const str = 'myschool|' + salt + '|' + pin;
+  try { if (window.crypto && crypto.subtle) { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)); return Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join(''); } } catch (e) {}
+  return 'f' + h53(str) + h53(str, 7);
+}
+const pinRef = (c, id) => DB.ref('pins/' + c + '/' + id);
+const pinLocked = () => { const t = +LS.get('pin_lock', 0); return t > Date.now() ? Math.ceil((t - Date.now()) / 1000) : 0; };
+function pinFail() { const n = (+LS.get('pin_try', 0)) + 1; if (n >= 5) { LS.set('pin_try', 0); LS.set('pin_lock', Date.now() + 60000); } else LS.set('pin_try', n); }
+const pinErr = m => { const e = $('#pinerr'); if (e) { e.textContent = m; e.style.display = 'block'; } };
+const pinOk = () => /^\d{4,6}$/;
+function pinSheet(rec, has) {
+  S.pinFor = rec;
+  sheet(has ? 'Введите PIN-код' : 'Создайте PIN-код', has
+    ? `<p class="ssub" style="margin-top:-6px">${esc(rec.name)}</p><label class="field"><span>PIN-код</span><input class="inp" id="pin1" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••"/></label><p class="err" id="pinerr"></p><button class="btn" data-act="pincheck">Войти</button><p class="muted" style="font-size:12px;margin:12px 2px 0">Забыли PIN? Попросите директора сбросить его.</p>`
+    : `<p class="ssub" style="margin-top:-6px">${esc(rec.name)}, это ваш первый вход. Придумайте PIN из 4–6 цифр — без него в ваш аккаунт никто не войдёт.</p><label class="field"><span>Новый PIN-код</span><input class="inp" id="pin1" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••"/></label><label class="field"><span>Повторите PIN-код</span><input class="inp" id="pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••"/></label><p class="err" id="pinerr"></p><button class="btn" data-act="pinset">Сохранить и войти</button>`);
+  setTimeout(() => { const i = $('#pin1'); if (i) i.focus(); }, 250);
 }
 function doLogin(name) {
   LS.set('chat_name', name); LS.set('login_user', JSON.stringify({ name }));
@@ -1393,6 +1473,7 @@ document.addEventListener('change', e => {
   const t = e.target, k = t.dataset && t.dataset.ch; if (!k) return;
   if (k === 'lcls') fillLoginNames();
   else if (k === 'schday') schSheet(+t.value);
+  else if (k === 'attdate') { if (t.value) { S.attDate = t.value; S.attLesson = null; ROUTES.att.fill(); } }
   else if (k === 'jsort') { S.jsort = t.value; ROUTES.journal.fill(); }
   else if (k === 'master') { const s = LS.json('myp_settings'); s.notifs = t.checked; LS.set('myp_settings', JSON.stringify(s)); }
   else if (k === 'pref') { const s = LS.json('st_settings'); s[t.dataset.k] = t.checked; LS.set('st_settings', JSON.stringify(s)); }
