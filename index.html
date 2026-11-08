@@ -509,6 +509,9 @@ button.gcb:active{background:var(--blue-soft)}
 @media (prefers-reduced-motion:reduce){
   .sheet.lgs,.sheet.lgs *{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+.duty-card{padding:14px 16px}.duty-card.today{outline:2px solid var(--blue);outline-offset:-2px}
+.duty-h{display:flex;align-items:center;gap:8px;margin-bottom:10px}.duty-h b{flex:1;font-size:calc(14px * var(--fs,1));color:var(--ink)}
+.duty-names{display:flex;flex-wrap:wrap;gap:6px}.duty-n{padding:6px 11px;border-radius:99px;background:var(--blue-soft);color:var(--blue);font-size:calc(12.5px * var(--fs,1));font-weight:700}.duty-n.me{background:var(--blue);color:#fff}
 </style>
 </head>
 <body>
@@ -538,9 +541,9 @@ let SCHEDULE = {};                   // расписание выбранног�
 const WD = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const WD_SHORT = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 const MON = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-const PREF = { hw:'notifHW', schedule:'notifSched', grades:'notifGrades', ann:'notifAnn', chat:'notifChat' };
-const SECTION_TYPE = { homework:'hw', schedule:'schedule', journal:'grades', grades:'grades', announcements:'ann', 'chat-section':'chat' };
-const HASH_ROUTE = { '#homework':'hw', '#schedule':'schedule', '#journal':'journal', '#grades':'journal', '#announcements':'news', '#chat-section':'chat' };
+const PREF = { hw:'notifHW', schedule:'notifSched', grades:'notifGrades', ann:'notifAnn', chat:'notifChat', duty:'notifDuty' };
+const SECTION_TYPE = { homework:'hw', schedule:'schedule', journal:'grades', grades:'grades', announcements:'ann', 'chat-section':'chat', duty:'duty' };
+const HASH_ROUTE = { '#homework':'hw', '#schedule':'schedule', '#journal':'journal', '#grades':'journal', '#announcements':'news', '#chat-section':'chat', '#duty':'duty' };
 
 /* ═══════════════ ХЕЛПЕРЫ ═══════════════ */
 const $ = (s, r = document) => r.querySelector(s);
@@ -600,7 +603,8 @@ const I = {
   pencil:'<path d="M4 20l1-4L16.5 4.5a2 2 0 0 1 3 3L8 19z"/>',
   copy:'<rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/>',
-  flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/>'
+  flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/>',
+  duty:'<path d="M12 3v7"/><path d="M8 10h8l1.5 11h-11z"/><path d="M9.5 15.5 9 21M14.5 15.5 15 21M12 15.5V21"/>'
 };
 const ic = (n, sz = 22, sw = 1.9) => `<svg class="ic" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n] || ''}</svg>`;
 
@@ -626,7 +630,7 @@ const subjPal = s => pal('s:' + norm(s));
 
 /* ═══════════════ СОСТОЯНИЕ ═══════════════ */
 const DB = window.firebaseDB || null;
-const D = { classes:{}, classesLoaded:false, j:{ subjects:[], journal:{} }, hw:[], att:{}, alog:{}, pay:{}, ann:[], changes:[], chat:{} };
+const D = { classes:{}, classesLoaded:false, j:{ subjects:[], journal:{} }, hw:[], att:{}, alog:{}, pay:{}, ann:[], changes:[], chat:{}, duty:null };
 let RAW_J = null;
 const S = { route:'', params:{}, stack:[], jsub:'all', jsort:'alpha', hwf:'all', day:null, cq:'', ctab:'students', nf:'all', reply:null, edit:null, chatStick:true };
 
@@ -733,7 +737,7 @@ const subs = [];
 function on(ref, ev, fn) { ref.on(ev, fn); subs.push([ref, ev, fn]); }
 function unlisten() {
   subs.forEach(x => x[0].off(x[1], x[2])); subs.length = 0;
-  Object.assign(D, { j:{ subjects:[], journal:{} }, hw:[], att:{}, alog:{}, pay:{}, ann:[], changes:[], chat:{} }); RAW_J = null; SCHEDULE = {};
+  Object.assign(D, { j:{ subjects:[], journal:{} }, hw:[], att:{}, alog:{}, pay:{}, ann:[], changes:[], chat:{}, duty:null }); RAW_J = null; SCHEDULE = {};
 }
 function rebuildStudents() {
   const c = cls(), list = c ? c.students.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru')) : [];
@@ -757,7 +761,7 @@ function listenClasses() {
       LS.del('cid'); unlisten();
       if (!isDirector() && me()) { LS.del('chat_name'); LS.del('login_user'); rebuildStudents(); go('welcome', {}, { tab: true }); toast('Класс удалён директором'); return; }
     }
-    rebuildStudents(); refreshLogin(); refresh();
+    rebuildStudents(); refreshLogin(); refresh(); dutyRemind();
   });
 }
 function listenClass(cid) {
@@ -772,6 +776,7 @@ function listenClass(cid) {
     on(b.child('announcements'), 'value', s => { D.ann = arr(s.val()).sort((a, b) => (b.ts || 0) - (a.ts || 0)); refresh(); });
     on(b.child('schedule_changes'), 'value', s => { D.changes = arr(s.val()).sort((a, b) => (b.ts || 0) - (a.ts || 0)); refresh(); });
     on(b.child('schedule'), 'value', s => { SCHEDULE = normSchedule(s.val()); refresh(); });
+    on(b.child('duty'), 'value', s => { D.duty = s.val() || null; refresh(); dutyRemind(); });
     const chat = b.child('chat').limitToLast(100);
     on(chat, 'child_added', s => { const m = s.val(); if (m) { m._k = s.key; D.chat[s.key] = m; refresh(); } });
     on(chat, 'child_changed', s => { const m = s.val(); if (m) { m._k = s.key; D.chat[s.key] = m; refresh(); } });
@@ -1125,7 +1130,7 @@ function profRows() {
   if (isDirector()) return profRow('dout', 'Выйти из режима директора');
   return (isTeacher() ? profRow('tout', 'Выйти из режима учителя') : profRow('tlogin', 'Режим учителя')) + profRow('dlogin', 'Режим директора');
 }
-const NEEDS_CLASS = ['journal', 'hw', 'schedule', 'news', 'chat', 'chatroom', 'pay', 'att'];
+const NEEDS_CLASS = ['journal', 'hw', 'schedule', 'news', 'chat', 'chatroom', 'pay', 'att', 'duty'];
 
 /* ═══════════════ ЭКРАНЫ ═══════════════ */
 const header = (title, o = {}) => `<header class="top ${o.back ? 'top-back' : ''}">${o.back ? `<button class="ib" data-act="back" aria-label="Назад">${ic('left', 22, 2.2)}</button>` : ''}<h1>${title}</h1><div class="top-r">${o.right || ''}</div></header>`;
@@ -1287,6 +1292,7 @@ ROUTES.home = {
     ${DB ? '' : '<div class="note">Нет связи с базой данных. Проверьте интернет и обновите страницу.</div>'}
     <div class="hello"><p class="hi">${greet()},<br><b>${esc(firstName())}!</b></p><p class="muted">Сегодня, ${fmtLong(new Date())}</p></div>
     <div id="homeClass"></div>
+    <div id="homeDuty"></div>
     <div id="homeDash"></div>
     <div class="tiles">
       <button class="tile" style="${cv(['#6C5CE7','#EEEAFF'])}" data-act="go" data-r="schedule"><span class="tile-ic">${ic('cal', 22)}</span><span>Расписание</span></button>
@@ -1299,7 +1305,7 @@ ROUTES.home = {
     <div id="homeEv" class="list"></div>`,
   fill() {
     const hc = $('#homeClass'); if (hc) hc.innerHTML = homeClassCard();
-    dashFill();
+    dashFill(); dutyHome();
     const mine = myStudent(), st = $('#homeStats');
     if (st) {
       if (!isDirector() && mine && overall(mine) != null) {
@@ -1316,6 +1322,8 @@ ROUTES.home = {
     const today = startOfDay(new Date());
     const hw = D.hw.filter(t => !t.done && (!t.due || parseYMD(t.due) >= today)).sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1)[0];
     if (hw) ev.push({ ico:'check', p:PAL[2], t:`${hw.subject}: ${hw.title}`, s: hw.due ? 'Срок: ' + fmtLong(parseYMD(hw.due)) : 'Без срока', go:'hw', tab:1 });
+    const dtoday = dutyOn(new Date());
+    if (dtoday && dtoday.length) ev.push({ ico:'duty', p:PAL[1], t:'Дежурные сегодня', s:dtoday.map(shortName).join(', '), go:'duty' });
     const an = D.ann[0];
     if (an) ev.push({ ico:'mega', p:PAL[4], t:an.title, s:fmtLong(new Date(an.ts)), go:'news' });
     const el = $('#homeEv'); if (!el) return;
@@ -1450,6 +1458,70 @@ ROUTES.schedule = {
   }
 };
 
+/* ── Дежурства: по кругу по списку класса, Пн–Сб ── */
+const DUTY_DAYS = [1, 2, 3, 4, 5, 6];
+const shortName = n => { const w = String(n).trim().split(/\s+/); return w[0] + (w[1] ? ' ' + w[1][0] + '.' : ''); };
+function dutyCfg() {
+  const d = D.duty; if (!d || !d.start) return null;
+  return { start: d.start, per: Math.max(1, Math.min(10, Math.round(+d.per) || 5)), off: d.off || {} };
+}
+function dutyOn(date) {
+  const c = dutyCfg(), n = ST.length; if (!c || !n) return null;
+  const day = startOfDay(date), key = ymd(day);
+  if (!DUTY_DAYS.includes(day.getDay()) || c.off[key]) return null;
+  const st = parseYMD(c.start); if (day < st) return null;
+  let idx = 0; const cur = new Date(st);
+  while (cur < day && idx < 3000) { if (DUTY_DAYS.includes(cur.getDay()) && !c.off[ymd(cur)]) idx++; cur.setDate(cur.getDate() + 1); }
+  const per = Math.min(c.per, n);
+  return Array.from({ length: per }, (_, k) => ST[(idx * per + k) % n]);
+}
+function dutyHome() {
+  const el = $('#homeDuty'); if (!el) return; el.innerHTML = '';
+  const mine = isDirector() ? '' : myStudent(); if (!mine) return;
+  const now = new Date(), tm = new Date(now); tm.setDate(now.getDate() + 1);
+  const t = dutyOn(now), n = dutyOn(tm), onT = !!(t && t.includes(mine)), onN = !!(n && n.includes(mine));
+  if (!onT && !onN) return;
+  const mates = (onT ? t : n).filter(x => x !== mine).map(shortName).join(', ');
+  el.innerHTML = `<button class="card row" style="margin-bottom:12px" data-act="go" data-r="duty"><span class="tile-ic sm" style="${cv(PAL[1])}">${ic('duty', 19)}</span><span class="grow"><div class="t">${onT ? 'Сегодня вы дежурный' : 'Завтра вы дежурный'}</div><div class="s">${mates ? 'Вместе с: ' + esc(mates) : 'Вы дежурите один'}</div></span><span class="chev">${ic('right', 16, 2.2)}</span></button>`;
+}
+/* напоминание: вечером накануне (с 18:00) и утром в день дежурства; работает, пока сайт или приложение открыты */
+function dutyRemind() {
+  const mine = isDirector() ? '' : myStudent();
+  if (!mine || !D.duty || !masterOn() || !catAllowed('duty')) return;
+  const now = new Date(), h = now.getHours(), tm = new Date(now); tm.setDate(now.getDate() + 1);
+  const t = dutyOn(now), n = dutyOn(tm), kT = 'duty_m_' + ymd(now), kN = 'duty_e_' + ymd(tm);
+  const mates = l => l.filter(x => x !== mine).map(shortName).join(', ');
+  if (t && t.includes(mine) && h >= 6 && h < 17 && !LS.get(kT)) {
+    LS.set(kT, '1'); showNative('🧹 Сегодня вы дежурный', mates(t) ? 'Вместе с: ' + mates(t) : '', 'duty-' + ymd(now), 'duty'); toast('Сегодня вы дежурный');
+  }
+  if (n && n.includes(mine) && h >= 18 && !LS.get(kN)) {
+    LS.set(kN, '1'); showNative('🧹 Завтра вы дежурный', mates(n) ? 'Вместе с: ' + mates(n) : '', 'duty-' + ymd(tm), 'duty'); toast('Завтра вы дежурный');
+  }
+}
+ROUTES.duty = {
+  tab: 'more',
+  shell: () => { S.dw = 0; return `${header('График дежурств', { back: true })}<div class="days" id="dutyTabs"></div><div id="dutyList" class="list"></div><div id="dutyTools"></div>`; },
+  fill() {
+    const el = $('#dutyList'); if (!el) return;
+    const w = S.dw || 0, cfg = dutyCfg(), mine = isDirector() ? '' : myStudent(), todayKey = ymd(new Date());
+    const tabs = $('#dutyTabs'); if (tabs) tabs.innerHTML = [['Эта неделя', 0], ['Следующая', 1]].map(x => `<button class="day ${x[1] === w ? 'on' : ''}" data-act="dutyweek" data-w="${x[1]}">${x[0]}</button>`).join('');
+    if (!cfg) el.innerHTML = `<div class="card">${empty('График не настроен', isTeacher() ? 'Нажмите «Настроить» и выберите первый день' : 'Учитель ещё не создал график')}</div>`;
+    else if (!ST.length) el.innerHTML = `<div class="card">${empty('В классе нет учеников', 'Дежурных нельзя назначить')}</div>`;
+    else {
+      const ws = weekStart(); ws.setDate(ws.getDate() + 7 * w);
+      el.innerHTML = DUTY_DAYS.map(dow => {
+        const d = new Date(ws); d.setDate(ws.getDate() + dow - 1);
+        const key = ymd(d), list = dutyOn(d), off = !!cfg.off[key], isT = key === todayKey;
+        const body = off ? '<div class="s">Без дежурства</div>'
+          : list ? `<div class="duty-names">${list.map(n => `<span class="duty-n ${n === mine ? 'me' : ''}">${esc(shortName(n))}</span>`).join('')}</div>`
+          : `<div class="s">${startOfDay(d) < parseYMD(cfg.start) ? 'График ещё не начался' : '—'}</div>`;
+        return `<div class="card duty-card ${isT ? 'today' : ''}"><div class="duty-h"><b>${WD[dow]}, ${fmtShort(d)}</b>${isT ? '<span class="chip blue">Сегодня</span>' : ''}${isTeacher() ? `<button class="mini-x" data-act="dutyoff" data-d="${key}" aria-label="${off ? 'Вернуть дежурство' : 'Убрать дежурство'}">${ic(off ? 'plus' : 'x', 17)}</button>` : ''}</div>${body}</div>`;
+      }).join('');
+    }
+    const tools = $('#dutyTools'); if (tools) tools.innerHTML = isTeacher() ? `<div class="bottom-cta"><button class="btn" data-act="dutyset">${ic('gear', 18)} Настроить</button></div>` : '';
+  }
+};
+
 /* ── Объявления ── */
 ROUTES.news = {
   tab: 'more',
@@ -1498,7 +1570,7 @@ ROUTES.more = {
   fill() {
     const el = $('#moreMenu'); if (!el) return;
     const annN = D.ann.filter(a => (a.ts || 0) > +LS.get('ann_seen', 0)).length;
-    const items = [['news','mega','Объявления',PAL[2],annN],['chat','msg','Чат класса',PAL[0],0],['pay','wallet','Оплата обучения',PAL[1],0],['att','clip','Посещаемость',PAL[4],0],['notifs','bell','Уведомления',PAL[3],0],['settings','gear','Настройки',PAL[3],0],['profile','user','Профиль',PAL[0],0],['motiv','star','Мотивация',PAL[2],0]];
+    const items = [['news','mega','Объявления',PAL[2],annN],['chat','msg','Чат класса',PAL[0],0],['pay','wallet','Оплата обучения',PAL[1],0],['att','clip','Посещаемость',PAL[4],0],['duty','duty','График дежурств',PAL[1],0],['notifs','bell','Уведомления',PAL[3],0],['settings','gear','Настройки',PAL[3],0],['profile','user','Профиль',PAL[0],0],['motiv','star','Мотивация',PAL[2],0]];
     el.innerHTML = items.map(i => `<button class="row" data-act="go" data-r="${i[0]}"><span class="tile-ic sm" style="${cv(i[3])}">${ic(i[1], 19)}</span><span class="grow t">${i[2]}</span>${i[4] ? `<span class="badge-n">${i[4]}</span>` : ''}<span class="chev">${ic('right', 16, 2.2)}</span></button>`).join('');
   }
 };
@@ -2057,12 +2129,31 @@ const ACT = {
     closeSheet(); toast('Опубликовано');
   },
   anndel(d) { needTeacher(() => { if (!needDB()) return; R('announcements/' + d.id).remove(); toast('Объявление удалено'); }); },
+  /* дежурства */
+  dutyweek(d) { S.dw = +d.w || 0; ROUTES.duty.fill(); },
+  dutyset() {
+    needTeacher(() => { const c = dutyCfg();
+      sheet('Настройка дежурств', `<p class="ssub" style="margin-top:-6px">Дежурные идут по кругу по списку класса (по алфавиту), с понедельника по субботу. Выходные и каникулы можно убрать в графике кнопкой ×.</p>
+        <label class="field"><span>Первый день графика</span><input class="inp" type="date" id="dst" value="${c ? esc(c.start) : ymd(new Date())}"/></label>
+        <label class="field"><span>Дежурных в день</span><input class="inp" type="number" id="dpr" min="1" max="10" inputmode="numeric" value="${c ? c.per : 5}"/></label>
+        <p class="err" id="dterr">Укажите дату и число от 1 до 10</p><button class="btn" data-act="dutysave">Сохранить</button>`); });
+  },
+  dutysave() {
+    if (!needDB()) return; const st = ($('#dst') || {}).value, per = +($('#dpr') || {}).value;
+    if (!st || !(per >= 1 && per <= 10)) { $('#dterr').style.display = 'block'; return; }
+    R('duty').update({ start: st, per: Math.round(per) }).catch(() => toast('Не удалось сохранить'));
+    closeSheet(); toast('График сохранён');
+  },
+  dutyoff(d) {
+    needTeacher(() => { if (!needDB() || !d.d) return; const c = dutyCfg(), off = !!(c && c.off[d.d]);
+      (off ? R('duty/off/' + d.d).remove() : R('duty/off/' + d.d).set(true)).then(() => toast(off ? 'Дежурство возвращено' : 'В этот день без дежурства')).catch(() => toast('Не удалось сохранить')); });
+  },
   /* фильтры уведомлений */
   nf(d) { S.nf = d.v; ROUTES.notifs.fill(); },
   notifSettings() {
     const st = LS.json('st_settings'), on = k => st[k] !== false ? 'checked' : '', row = (k, t, s) => `<div class="row" style="padding:12px 0;border-bottom:1px solid var(--line)"><span class="grow"><div class="t">${t}</div><div class="s">${s}</div></span><label class="sw"><input type="checkbox" data-ch="pref" data-k="${k}" ${on(k)}/><i></i></label></div>`;
-    sheet('Настройки уведомлений', `<div class="row" style="padding:12px 0;border-bottom:1px solid var(--line)"><span class="grow"><div class="t">Все уведомления</div><div class="s">Главный переключатель</div></div><label class="sw"><input type="checkbox" data-ch="master" ${masterOn() ? 'checked' : ''}/><i></i></label></div>
-      ${row('notifHW','Новое ДЗ','Предмет и задание')}${row('notifSched','Изменения расписания','Замены и отмена уроков')}${row('notifGrades','Новые оценки','Только ваши оценки')}${row('notifAnn','Объявления','От учителя')}${row('notifChat','Ответы в чате','Когда вам ответили')}
+    sheet('Настройки уведомлений', `<div class="row" style="padding:12px 0;border-bottom:1px solid var(--line)"><span class="grow"><div class="t">Все уведомления</div><div class="s">Главный переключатель</div></span><label class="sw"><input type="checkbox" data-ch="master" ${masterOn() ? 'checked' : ''}/><i></i></label></div>
+      ${row('notifHW','Новое ДЗ','Предмет и задание')}${row('notifSched','Изменения расписания','Замены и отмена уроков')}${row('notifGrades','Новые оценки','Только ваши оценки')}${row('notifAnn','Объявления','От учителя')}${row('notifChat','Ответы в чате','Когда вам ответили')}${row('notifDuty','Дежурство','Напоминание накануне вечером и утром')}
       <button class="btn" style="margin-top:14px" data-act="notifTest">Включить и проверить</button>`);
   },
   notifTest() {
@@ -2195,6 +2286,8 @@ document.addEventListener('keydown', e => {
 listenClasses();
 if (curCid()) listenClass(curCid());
 setInterval(() => { if (S.route === 'home' || S.route === 'schedule') refresh(); }, 60000);
+setInterval(dutyRemind, 600000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) dutyRemind(); });
 if (me() && (curCid() || isDirector())) go(HASH_ROUTE[location.hash] || 'home', {}, { replace: true }); else go('welcome', {}, { replace: true });
 })();
 </script>
